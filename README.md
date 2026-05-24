@@ -38,15 +38,7 @@ Track your weekly nutritional intake seamlessly.
 - **Authentication & Cloud Sync:** Supabase
 - **Styling:** Custom theming and UI components
 
-## 🚀 Getting Started
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Start the Expo development server:
-   ```bash
+CookWiki is an own made app made from scratch, contact if interested.
    npx expo start
    ```
 
