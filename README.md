@@ -39,7 +39,3 @@ Track your weekly nutritional intake seamlessly.
 - **Styling:** Custom theming and UI components
 
 CookWiki is an own made app made from scratch, contact if interested.
-   npx expo start
-   ```
-
-3. Follow the Expo CLI instructions to open the app on your physical device via Expo Go or on a local iOS/Android simulator.
