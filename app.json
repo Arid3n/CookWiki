@@ -41,7 +41,8 @@
         {
           "cameraPermission": "CookWiki uses the camera to scan nutrition labels. Photos are not saved."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},

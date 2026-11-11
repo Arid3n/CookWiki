@@ -27,3 +27,9 @@ The camera permission text comes from `app.json` (the `expo-image-picker` plugin
 npm test
 npx tsc --noEmit
 ```
+
+## Fonts
+
+The display font Harmera (`assets/fonts/harmera.ttf`) is free for personal use only
+(source: 1001fonts.com). This app is a personal tool; do not redistribute the font or the app
+bundle with it. Rubik and Geist come from `@expo-google-fonts` (OFL).
