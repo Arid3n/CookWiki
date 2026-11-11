@@ -3,10 +3,11 @@ import {
   ActivityIndicator, Pressable, RefreshControl, ScrollView, SectionList, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FoodRow from '@/components/FoodRow';
 import ChatBar from '@/components/ChatBar';
+import Hero from '@/components/ui/Hero';
+import Icon from '@/components/ui/Icon';
+import { colors, fonts, space } from '@/lib/ui/theme';
 import { listFoods, syncFromSupabase } from '@/lib/library/repository';
 import { normalizeName } from '@/lib/library/duplicates';
 import { applyFilters, distinctTags } from '@/lib/library/search';
@@ -17,13 +18,14 @@ import { Food } from '@/lib/library/types';
 
 /**
  * Bottom padding so the last row clears the global calculator FAB, which sits
- * 32pt above the ChatBar (FAB bottom 96 vs bar 64) and is 48pt tall:
- * 32 + 48 + 8 breathing room = 88.
+ * 32pt above the ChatBar and is sizes.fab (56pt) tall:
+ * 32 + 56 + 8 breathing room = 96.
  */
-const LIST_BOTTOM_PADDING = 88;
+const LIST_BOTTOM_PADDING = 96;
+const HERO_HEIGHT = 164;
+const SEARCH_HEIGHT = 44;
 
 export default function Library() {
-  const insets = useSafeAreaInsets();
   const [foods, setFoods] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -118,31 +120,39 @@ export default function Library() {
     router.push({ pathname: '/food/[id]', params: { id } });
   }, []);
 
+  const dishCount = useMemo(() => foods.filter((f) => f.kind === 'dish').length, [foods]);
+
   const searching = query.trim().length > 0 || activeTags.length > 0;
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.title} accessibilityRole="header">Library</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Settings"
-          onPress={() => router.push('/settings')}
-          style={styles.settings}
-        >
-          <Text style={styles.settingsText}>Settings</Text>
-        </Pressable>
-      </View>
+    <View style={styles.screen}>
+      <Hero height={HERO_HEIGHT} seed={2}>
+        <View style={styles.header}>
+          <View style={styles.headerText}>
+            <Text style={styles.title} accessibilityRole="header">your library</Text>
+            <Text style={styles.count}>{foods.length} foods · {dishCount} dishes</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            onPress={() => router.push('/settings')}
+            hitSlop={6}
+            style={styles.settings}
+          >
+            <Icon name="gear" size={18} color={colors.text} />
+          </Pressable>
+        </View>
+      </Hero>
 
       <View style={styles.searchBox}>
-        <Ionicons name="search" size={18} color="#94A3B8" />
+        <Icon name="search" size={18} color={colors.sub} />
         <TextInput
           accessibilityLabel="Search foods"
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
           placeholder="Search foods or tags"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={colors.sub}
           returnKeyType="search"
           autoCorrect={false}
         />
@@ -154,7 +164,7 @@ export default function Library() {
             hitSlop={8}
             style={styles.clear}
           >
-            <Ionicons name="close-circle" size={20} color="#94A3B8" />
+            <Icon name="close" size={16} color={colors.sub} />
           </Pressable>
         )}
       </View>
@@ -208,7 +218,7 @@ export default function Library() {
             hitSlop={8}
             style={styles.smartDismiss}
           >
-            <Ionicons name="close-circle" size={20} color="#94A3B8" />
+            <Icon name="close" size={16} color={colors.sub} />
           </Pressable>
         </View>
       )}
@@ -230,7 +240,7 @@ export default function Library() {
       )}
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color="#10B981" size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={colors.peach} size="large" /></View>
       ) : (
         <SectionList
           style={styles.list}
@@ -244,7 +254,7 @@ export default function Library() {
           stickySectionHeadersEnabled={false}
           keyboardShouldPersistTaps="handled"
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10B981" colors={['#10B981']} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.peach} colors={[colors.peach]} />
           }
           ListEmptyComponent={
             <Text style={styles.empty}>
@@ -262,43 +272,56 @@ export default function Library() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0F172A' },
+  screen: { flex: 1, backgroundColor: colors.bg },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 8,
+    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
+    paddingHorizontal: space.gutter, paddingTop: 14,
   },
-  title: { color: '#F1F5F9', fontSize: 24, fontWeight: 'bold' },
-  settings: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' },
-  settingsText: { color: '#10B981', fontSize: 16 },
+  headerText: { flex: 1, paddingRight: 12 },
+  title: { color: colors.text, fontFamily: fonts.display, fontSize: 30, lineHeight: 34, textTransform: 'uppercase' },
+  count: { color: colors.peach, fontFamily: fonts.body, fontSize: 12, marginTop: 4 },
+  settings: {
+    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(32,18,10,0.28)',
+  },
   searchBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginVertical: 8,
-    minHeight: 44, paddingHorizontal: 12, borderRadius: 12, backgroundColor: '#1E293B',
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: space.gutter,
+    marginTop: -SEARCH_HEIGHT / 2, marginBottom: 12, zIndex: 5,
+    height: SEARCH_HEIGHT, paddingHorizontal: space.gutter, borderRadius: SEARCH_HEIGHT / 2,
+    backgroundColor: colors.surface2,
+    shadowColor: colors.shadow, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
-  searchInput: { flex: 1, minHeight: 44, color: '#F1F5F9', fontSize: 16 },
+  searchInput: { flex: 1, height: SEARCH_HEIGHT, color: colors.text, fontFamily: fonts.body, fontSize: 14 },
   clear: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginRight: -12 },
-  chipScroll: { flexGrow: 0 },
-  chipRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
+  chipScroll: { flexGrow: 0, marginBottom: 8 },
+  chipRow: { paddingHorizontal: space.gutter, gap: 6, alignItems: 'center' },
   chip: {
     minHeight: 44, minWidth: 44, paddingHorizontal: 14, borderRadius: 22,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#1E293B',
-    borderWidth: 1, borderColor: '#334155',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2,
   },
-  chipSelected: { backgroundColor: '#10B981', borderColor: '#10B981' },
-  chipText: { color: '#CBD5E1', fontSize: 14 },
-  chipTextSelected: { color: '#0F172A', fontWeight: '600' },
-  clearChipText: { color: '#10B981', fontSize: 14, fontWeight: '600' },
-  banner: { marginHorizontal: 16, marginBottom: 4, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#1E293B' },
-  bannerText: { color: '#94A3B8', fontSize: 13 },
+  chipSelected: { backgroundColor: colors.peach },
+  chipText: { color: colors.sub, fontFamily: fonts.body, fontSize: 13 },
+  chipTextSelected: { color: colors.ink, fontFamily: fonts.bodyBold },
+  clearChipText: { color: colors.peach, fontFamily: fonts.bodyBold, fontSize: 13 },
+  banner: {
+    marginHorizontal: space.gutter, marginBottom: 8, paddingVertical: 10, paddingHorizontal: 12,
+    borderRadius: 14, backgroundColor: colors.surface, borderLeftWidth: 3, borderLeftColor: colors.gold,
+  },
+  bannerText: { color: colors.sub, fontFamily: fonts.body, fontSize: 13 },
   smartRow: {
-    flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 4,
-    paddingLeft: 12, borderRadius: 8, backgroundColor: '#1E293B',
+    flexDirection: 'row', alignItems: 'center', marginHorizontal: space.gutter, marginBottom: 8,
+    paddingLeft: 12, borderRadius: 14, backgroundColor: colors.surface,
+    borderLeftWidth: 3, borderLeftColor: colors.sage,
   },
-  smartText: { flex: 1, color: '#10B981', fontSize: 13 },
+  smartText: { flex: 1, color: colors.text, fontFamily: fonts.body, fontSize: 13 },
   smartDismiss: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { flex: 1 },
-  listContent: { paddingHorizontal: 16, paddingBottom: LIST_BOTTOM_PADDING },
+  listContent: { paddingHorizontal: space.gutter, paddingBottom: LIST_BOTTOM_PADDING },
   emptyContent: { flexGrow: 1, justifyContent: 'center' },
-  sectionTitle: { color: '#94A3B8', fontSize: 13, fontWeight: '600', textTransform: 'uppercase', marginTop: 12, marginBottom: 8 },
-  empty: { color: '#94A3B8', fontSize: 16, textAlign: 'center', paddingHorizontal: 24 },
+  sectionTitle: {
+    color: colors.sub, fontFamily: fonts.heading, fontSize: 11, letterSpacing: 1,
+    textTransform: 'uppercase', marginTop: 12, marginBottom: 8,
+  },
+  empty: { color: colors.sub, fontFamily: fonts.body, fontSize: 16, textAlign: 'center', paddingHorizontal: 24 },
 });
