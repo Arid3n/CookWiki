@@ -1,6 +1,6 @@
 import { supabase } from '../supabase';
 import { OfflineError, isNetworkError } from './errors';
-import { readLocal, replaceLocal, type FoodRow, type VariantRow } from './localDb';
+import { getGeneration, readLocal, replaceLocal, type FoodRow, type VariantRow } from './localDb';
 import type { Food, FoodKind, Macros, Variant } from './types';
 
 export type NewVariant = Macros & {
@@ -155,7 +155,9 @@ export async function listFoods(): Promise<Food[]> {
     list.push(variantFromLocal(r));
     byFood.set(r.food_id, list);
   }
-  return foods.map((f) => ({
+  return foods
+    .filter((f) => byFood.has(f.id))
+    .map((f) => ({
     id: f.id,
     kind: f.kind as FoodKind,
     name: f.name,
@@ -166,17 +168,43 @@ export async function listFoods(): Promise<Food[]> {
   }));
 }
 
-/** Full pull of both tables, then replace local rows in one transaction. */
-export async function syncFromSupabase(): Promise<void> {
+let syncSeq = 0;
+let lastAppliedSeq = 0;
+let inflight: { gen: number; promise: Promise<void> } | null = null;
+
+async function pullAndReplace(): Promise<void> {
+  const gen = getGeneration();
+  const seq = ++syncSeq;
   const foods = await pullAll('foods');
   const variants = await pullAll('food_variants');
-  await replaceLocal(foods.map(foodToLocal), variants.map(variantToLocal));
+  await replaceLocal(foods.map(foodToLocal), variants.map(variantToLocal), () => {
+    // skip if signed out meanwhile, or a later-started pull already landed
+    if (gen !== getGeneration() || seq < lastAppliedSeq) return false;
+    lastAppliedSeq = seq;
+    return true;
+  });
 }
 
-/** Best-effort local refresh after a successful write. */
+/**
+ * Full pull of both tables, then replace local rows in one transaction.
+ * Overlapping calls share one pull.
+ */
+export function syncFromSupabase(): Promise<void> {
+  const gen = getGeneration();
+  if (inflight && inflight.gen === gen) return inflight.promise;
+  const entry = { gen, promise: pullAndReplace() };
+  inflight = entry;
+  const clear = () => {
+    if (inflight === entry) inflight = null;
+  };
+  entry.promise.then(clear, clear);
+  return entry.promise;
+}
+
+/** Best-effort local refresh after a successful write. Always pulls fresh (never joins an older pull). */
 async function refresh(): Promise<void> {
   try {
-    await syncFromSupabase();
+    await pullAndReplace();
   } catch {
     // write already succeeded; next sync will catch up
   }
@@ -208,7 +236,8 @@ export async function createFood(input: NewFood): Promise<Food> {
     );
   } catch (e) {
     try {
-      await supabase.from('foods').delete().eq('id', foodRow.id);
+      const del: any = await supabase.from('foods').delete().eq('id', foodRow.id);
+      if (del?.error) throw del.error;
     } catch {
       // best-effort compensation
     }
@@ -289,14 +318,19 @@ export async function deleteVariant(id: string): Promise<void> {
   const siblings = variants.filter((v) => v.food_id === target.food_id);
   if (siblings.length <= 1) throw new Error('A food needs at least one variant');
 
-  await call(supabase.from('food_variants').delete().eq('id', id) as any);
-
-  if (target.is_default) {
-    const remaining = siblings.filter((v) => v.id !== id);
-    const next = remaining.reduce((best, v) =>
-      (v.updated_at ?? '') > (best.updated_at ?? '') ? v : best,
-    );
-    await promote(target.food_id, next.id);
+  let touched = false;
+  try {
+    if (target.is_default) {
+      // Promote first, delete second: every intermediate remote state has a default.
+      const next = siblings
+        .filter((v) => v.id !== id)
+        .sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? '') || a.id.localeCompare(b.id))[0];
+      await promote(target.food_id, next.id);
+      touched = true;
+    }
+    await call(supabase.from('food_variants').delete().eq('id', id) as any);
+    touched = true;
+  } finally {
+    if (touched) await refresh();
   }
-  await refresh();
 }

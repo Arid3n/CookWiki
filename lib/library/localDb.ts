@@ -85,18 +85,45 @@ function insertSql(table: string, cols: readonly string[]): string {
   return `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`;
 }
 
-/** Replace all local rows in one transaction. */
-export async function replaceLocal(foods: FoodRow[], variants: VariantRow[]): Promise<void> {
-  const db = await getDb();
-  await db.withTransactionAsync(async () => {
-    await db.runAsync('DELETE FROM food_variants');
-    await db.runAsync('DELETE FROM foods');
-    for (const f of foods) {
-      await db.runAsync(insertSql('foods', FOOD_COLS), FOOD_COLS.map((c) => f[c]));
-    }
-    for (const v of variants) {
-      await db.runAsync(insertSql('food_variants', VARIANT_COLS), VARIANT_COLS.map((c) => v[c]));
-    }
+// All local writes go through one promise chain: expo-sqlite's
+// withTransactionAsync is not exclusive, so overlapping calls would collide.
+let chain: Promise<unknown> = Promise.resolve();
+function exclusive<T>(fn: () => Promise<T>): Promise<T> {
+  const p = chain.then(fn);
+  chain = p.catch(() => {});
+  return p;
+}
+
+let generation = 0;
+/** Bumped by clearLocalLibrary; a sync that pulled under an older value must not write. */
+export function getGeneration(): number {
+  return generation;
+}
+
+/**
+ * Replace all local rows in one transaction, serialized with other writes.
+ * `guard` runs inside the queue right before writing; return false to skip.
+ * Resolves true when written.
+ */
+export function replaceLocal(
+  foods: FoodRow[],
+  variants: VariantRow[],
+  guard?: () => boolean,
+): Promise<boolean> {
+  return exclusive(async () => {
+    if (guard && !guard()) return false;
+    const db = await getDb();
+    await db.withTransactionAsync(async () => {
+      await db.runAsync('DELETE FROM food_variants');
+      await db.runAsync('DELETE FROM foods');
+      for (const f of foods) {
+        await db.runAsync(insertSql('foods', FOOD_COLS), FOOD_COLS.map((c) => f[c]));
+      }
+      for (const v of variants) {
+        await db.runAsync(insertSql('food_variants', VARIANT_COLS), VARIANT_COLS.map((c) => v[c]));
+      }
+    });
+    return true;
   });
 }
 
@@ -108,6 +135,7 @@ export async function readLocal(): Promise<{ foods: FoodRow[]; variants: Variant
 }
 
 /** Wipe local library (call on sign-out so another user never sees this data). */
-export async function clearLocalLibrary(): Promise<void> {
-  await replaceLocal([], []);
+export function clearLocalLibrary(): Promise<void> {
+  generation++; // synchronously invalidates any in-flight sync
+  return replaceLocal([], []).then(() => undefined);
 }

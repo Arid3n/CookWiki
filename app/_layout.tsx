@@ -19,7 +19,11 @@ export default function RootLayout() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
-        clearLocalLibrary().catch(() => {});
+        clearLocalLibrary().catch(() =>
+          clearLocalLibrary().catch((e) =>
+            console.warn('Failed to clear local library on sign-out', e),
+          ),
+        );
         router.replace('/login');
       } else if (event === 'SIGNED_IN') {
         syncQuietly();

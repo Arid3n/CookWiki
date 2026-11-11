@@ -84,11 +84,23 @@ import {
   updateFood,
   updateVariant,
 } from '../repository';
-import { clearLocalLibrary } from '../localDb';
+import { clearLocalLibrary, replaceLocal } from '../localDb';
 
 const sqlite = require('expo-sqlite') as {
   __tables: () => Map<string, any[]>;
   __reset: () => void;
+  __failInsertAfter: (n: number) => void;
+};
+
+const foodRow = (id: string) => ({ id, kind: 'single', name: id, pinned: false, tags: [], updated_at: 'u' });
+const variantRow = (id: string, foodId: string, extra: any = {}) => ({
+  id, food_id: foodId, label: 'Normal', is_default: true, kcal: 1, protein: 1, carbs: 1, fat: 1,
+  sat_fat: null, sugar: null, fiber: null, sodium_mg: null, kcal_min: null, kcal_max: null,
+  confidence: null, ingredients: null, updated_at: 'u', ...extra,
+});
+const seedServer = (...ids: string[]) => {
+  foods = ids.map(foodRow);
+  variants = ids.map((id) => variantRow(`v-${id}`, id));
 };
 
 // In-memory fake server -------------------------------------------------------
@@ -280,9 +292,8 @@ describe('sync and listFoods', () => {
   });
 
   it('pages 1000 rows at a time', async () => {
-    foods = Array.from({ length: 1001 }, (_, i) => ({
-      id: `p${i}`, kind: 'single', name: `F${i}`, pinned: false, tags: [], updated_at: 't',
-    }));
+    foods = Array.from({ length: 1001 }, (_, i) => foodRow(`p${i}`));
+    variants = foods.map((f) => variantRow(`v-${f.id}`, f.id));
     await syncFromSupabase();
     const foodSelects = mockCalls.filter((c) => c.table === 'foods' && c.op === 'select');
     expect(foodSelects.map((c) => c.range)).toEqual([[0, 999], [1000, 1999]]);
@@ -290,7 +301,7 @@ describe('sync and listFoods', () => {
   });
 
   it('failure leaves local data intact', async () => {
-    foods = [{ id: 'a', kind: 'dish', name: 'Stew', pinned: false, tags: [], updated_at: 'u' }];
+    seedServer('a');
     await syncFromSupabase();
     mockHandler = (c) => {
       if (c.table === 'food_variants') throw new TypeError('Network request failed');
@@ -301,7 +312,7 @@ describe('sync and listFoods', () => {
   });
 
   it('clearLocalLibrary empties local data', async () => {
-    foods = [{ id: 'a', kind: 'dish', name: 'Stew', pinned: false, tags: [], updated_at: 'u' }];
+    seedServer('a');
     await syncFromSupabase();
     await clearLocalLibrary();
     expect(await listFoods()).toEqual([]);
@@ -341,7 +352,7 @@ describe('variants and defaults', () => {
     mockCalls.length = 0;
     await deleteVariant(v1.id);
     const ops = writes().map((c) => `${c.op}:${c.table}`);
-    expect(ops).toEqual(['delete:food_variants', 'rpc:set_default_variant']);
+    expect(ops).toEqual(['rpc:set_default_variant', 'delete:food_variants']);
     expect(mockCalls.find((c) => c.op === 'rpc')!.payload).toEqual({
       p_food_id: f.id,
       p_variant_id: v2.id,
@@ -407,5 +418,137 @@ describe('updateFood / deleteFood', () => {
     };
     await expect(updateFood(f.id, { name: 'X' })).rejects.toBeInstanceOf(OfflineError);
     expect((await listFoods())[0].name).toBe('Rice');
+  });
+});
+
+describe('deleteVariant partial failure', () => {
+  it('promote ok, delete fails: one default remotely and local refreshed', async () => {
+    const f = await createFood({ kind: 'single', name: 'Rice', variant: newVariant });
+    const v2 = await addVariant(f.id, { ...newVariant, label: 'Large' });
+    const v1 = f.variants[0];
+    mockHandler = (c) => {
+      if (c.op === 'delete') throw new TypeError('Network request failed');
+      return server(c);
+    };
+    await expect(deleteVariant(v1.id)).rejects.toBeInstanceOf(OfflineError);
+    expect(variants.filter((v) => v.food_id === f.id && v.is_default).map((v) => v.id)).toEqual([v2.id]);
+    const local = (await listFoods())[0];
+    expect(local.variants.find((v) => v.id === v2.id)!.isDefault).toBe(true);
+    expect(local.variants.find((v) => v.id === v1.id)!.isDefault).toBe(false);
+  });
+
+  it('picks most recent updated_at, tie broken by smallest id', async () => {
+    seedServer('a');
+    variants.push(
+      variantRow('v-b', 'a', { is_default: false, updated_at: 'u5' }),
+      variantRow('v-d', 'a', { is_default: false, updated_at: 'u9' }),
+      variantRow('v-c', 'a', { is_default: false, updated_at: 'u9' }),
+    );
+    await syncFromSupabase();
+    mockCalls.length = 0;
+    await deleteVariant('v-a');
+    expect(mockCalls.find((c) => c.op === 'rpc')!.payload.p_variant_id).toBe('v-c');
+  });
+});
+
+describe('createFood compensation failure', () => {
+  it('still throws the original error when the compensating delete fails', async () => {
+    failVariantInsert = true;
+    mockHandler = (c) => {
+      if (c.op === 'delete') return { data: null, error: { message: 'nope', code: '42501' } };
+      return server(c);
+    };
+    await expect(
+      createFood({ kind: 'single', name: 'Rice', variant: newVariant }),
+    ).rejects.toMatchObject({ code: '23514' });
+  });
+});
+
+describe('listFoods', () => {
+  it('skips foods with zero variants', async () => {
+    seedServer('a', 'b');
+    variants = variants.filter((v) => v.food_id === 'a');
+    await syncFromSupabase();
+    expect((await listFoods()).map((f) => f.id)).toEqual(['a']);
+  });
+});
+
+describe('local write serialization', () => {
+  const gate = () => {
+    let release!: () => void;
+    const p = new Promise<void>((r) => (release = r));
+    return { p, release };
+  };
+
+  it('replaceLocal rolls back when an insert throws mid-transaction', async () => {
+    seedServer('a');
+    await syncFromSupabase();
+    sqlite.__failInsertAfter(1);
+    await expect(
+      replaceLocal([foodRow('x'), foodRow('y')] as any, []),
+    ).rejects.toThrow('injected insert failure');
+    expect((await listFoods()).map((f) => f.id)).toEqual(['a']);
+  });
+
+  it('overlapping local writes run serially without nested transactions', async () => {
+    seedServer('a');
+    await syncFromSupabase();
+    await expect(
+      Promise.all([
+        replaceLocal([foodRow('p')] as any, [variantRow('v-p', 'p')] as any),
+        replaceLocal([foodRow('q')] as any, [variantRow('v-q', 'q')] as any),
+        clearLocalLibrary(),
+      ]),
+    ).resolves.toBeDefined();
+    expect(await listFoods()).toEqual([]);
+  });
+
+  it('coalesces overlapping syncs into one pull', async () => {
+    seedServer('a');
+    await Promise.all([syncFromSupabase(), syncFromSupabase()]);
+    expect(mockCalls.filter((c) => c.table === 'foods' && c.op === 'select')).toHaveLength(1);
+    expect(await listFoods()).toHaveLength(1);
+  });
+
+  it('a sync that pulled before sign-out cannot repopulate after the clear', async () => {
+    seedServer('a');
+    const g = gate();
+    mockHandler = async (c) => {
+      const r = server(c);
+      if (c.table === 'food_variants') await g.p;
+      return r;
+    };
+    const sync = syncFromSupabase();
+    await new Promise((r) => setTimeout(r, 5));
+    await clearLocalLibrary();
+    g.release();
+    await sync;
+    expect(await listFoods()).toEqual([]);
+  });
+
+  it('clear racing a fresh sync ends empty', async () => {
+    seedServer('a');
+    await Promise.all([syncFromSupabase(), clearLocalLibrary()]);
+    expect(await listFoods()).toEqual([]);
+  });
+
+  it('a sync started after a clear is not coalesced into the stale one', async () => {
+    seedServer('a');
+    const g = gate();
+    let first = true;
+    mockHandler = async (c) => {
+      const r = server(c);
+      if (first && c.table === 'foods') {
+        first = false;
+        await g.p;
+      }
+      return r;
+    };
+    const stale = syncFromSupabase();
+    await clearLocalLibrary();
+    const fresh = syncFromSupabase();
+    g.release();
+    await Promise.all([stale, fresh]);
+    expect((await listFoods()).map((f) => f.id)).toEqual(['a']);
   });
 });
