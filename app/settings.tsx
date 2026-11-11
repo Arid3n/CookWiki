@@ -16,7 +16,6 @@ export default function Settings() {
   useEffect(() => {
     getGeminiConfig()
       .then((c) => {
-        setKey(c.apiKey ?? '');
         setHasKey(!!c.apiKey);
         setModel(c.model);
       })
@@ -25,8 +24,10 @@ export default function Settings() {
 
   const save = async () => {
     try {
-      await setGeminiKey(key);
+      if (key.trim()) await setGeminiKey(key);
       await setGeminiModel(model);
+      setKey('');
+      setShow(false);
       const c = await getGeminiConfig();
       setHasKey(!!c.apiKey);
       setModel(c.model);
@@ -79,11 +80,11 @@ export default function Settings() {
           secureTextEntry={!show}
           autoCapitalize="none"
           autoCorrect={false}
-          placeholder="Paste your Gemini API key"
+          placeholder={hasKey ? 'Key saved (hidden)' : 'Paste your Gemini API key'}
           placeholderTextColor="#64748B"
           accessibilityLabel="Gemini API key"
         />
-        <Pressable accessibilityRole="button" onPress={() => setShow((s) => !s)} style={styles.toggle}>
+        <Pressable accessibilityRole="button" accessibilityLabel={show ? 'Hide API key' : 'Show API key'} onPress={() => setShow((s) => !s)} style={styles.toggle}>
           <Text style={styles.link}>{show ? 'Hide' : 'Show'}</Text>
         </Pressable>
       </View>

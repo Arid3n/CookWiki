@@ -130,4 +130,60 @@ describe('callGemini', () => {
     fetchMock.mockRejectedValue(new TypeError('Network request failed'));
     await expect(callGemini({ contents: userContent })).rejects.toThrow('Network request failed');
   });
+  it('empty candidate (SAFETY) throws GeminiBlockedError', async () => {
+    await setGeminiKey(FAKE_KEY);
+    fetchMock.mockResolvedValue(okJson({ candidates: [{ finishReason: 'SAFETY' }] }));
+    const err = await callGemini({ contents: userContent }).catch((e) => e);
+    expect(err).toBeInstanceOf(GeminiBlockedError);
+    expect(err.message).toContain('SAFETY');
+  });
+
+  it('MAX_TOKENS with responseSchema throws', async () => {
+    await setGeminiKey(FAKE_KEY);
+    fetchMock.mockResolvedValue(
+      okJson({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '{"a":' }] } }] }),
+    );
+    const err = await callGemini({ contents: userContent, responseSchema: {} }).catch((e) => e);
+    expect(err).toBeInstanceOf(GeminiBlockedError);
+    expect(err.message).toContain('MAX_TOKENS');
+  });
+
+  it('MAX_TOKENS without schema returns text', async () => {
+    await setGeminiKey(FAKE_KEY);
+    fetchMock.mockResolvedValue(
+      okJson({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'partial' }] } }] }),
+    );
+    expect(await callGemini({ contents: userContent })).toEqual({ text: 'partial' });
+  });
+
+  const abortableFetch = (_url: string, init: { signal: AbortSignal }) =>
+    new Promise((_res, rej) => {
+      const fail = () => rej(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+      if (init.signal.aborted) fail();
+      else init.signal.addEventListener('abort', fail);
+    });
+
+  it('caller signal aborts with AbortError', async () => {
+    await setGeminiKey(FAKE_KEY);
+    fetchMock.mockImplementation(abortableFetch);
+    const ac = new AbortController();
+    ac.abort();
+    const err = await callGemini({ contents: userContent, signal: ac.signal }).catch((e) => e);
+    expect(err.name).toBe('AbortError');
+    expect(err.message).not.toContain(FAKE_KEY);
+  });
+
+  it('times out after 60s with AbortError', async () => {
+    jest.useFakeTimers();
+    try {
+      await setGeminiKey(FAKE_KEY);
+      fetchMock.mockImplementation(abortableFetch);
+      const p = callGemini({ contents: userContent }).catch((e) => e);
+      await jest.advanceTimersByTimeAsync(60_000);
+      const err = await p;
+      expect(err.name).toBe('AbortError');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

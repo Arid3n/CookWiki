@@ -16,6 +16,8 @@ export interface GeminiRequest {
   contents: GeminiContent[];
   tools?: unknown[];
   responseSchema?: unknown;
+  /** Abort the request; surfaces as an AbortError. */
+  signal?: AbortSignal;
 }
 
 export interface GeminiResult {
@@ -48,6 +50,7 @@ export class GeminiBlockedError extends Error {
   }
 }
 
+const TIMEOUT_MS = 60_000;
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export async function callGemini(req: GeminiRequest): Promise<GeminiResult> {
@@ -61,11 +64,24 @@ export async function callGemini(req: GeminiRequest): Promise<GeminiResult> {
     body.generationConfig = { responseMimeType: 'application/json', responseSchema: req.responseSchema };
   }
 
-  const res = await fetch(`${BASE_URL}/${encodeURIComponent(model)}:generateContent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const onCallerAbort = () => controller.abort();
+  if (req.signal?.aborted) controller.abort();
+  else req.signal?.addEventListener('abort', onCallerAbort);
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+    req.signal?.removeEventListener('abort', onCallerAbort);
+  }
 
   if (!res.ok) {
     let detail = '';
@@ -87,5 +103,12 @@ export async function callGemini(req: GeminiRequest): Promise<GeminiResult> {
   if (text) result.text = text;
   const fc = parts.find((p) => p.functionCall)?.functionCall;
   if (fc) result.functionCall = { name: fc.name, args: fc.args ?? {} };
+  const reason = json.candidates[0]?.finishReason;
+  if (!result.text && !result.functionCall) {
+    throw new GeminiBlockedError(reason ?? 'no content');
+  }
+  if (req.responseSchema !== undefined && reason === 'MAX_TOKENS') {
+    throw new GeminiBlockedError('MAX_TOKENS: the answer was cut off');
+  }
   return result;
 }
