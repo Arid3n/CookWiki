@@ -12,6 +12,7 @@ import { listFoods, syncFromSupabase } from '@/lib/library/repository';
 import { normalizeName } from '@/lib/library/duplicates';
 import { applyFilters, distinctTags } from '@/lib/library/search';
 import { sortFoods } from '@/lib/library/sort';
+import { libraryCountLabel } from '@/lib/library/countLabel';
 import { describeFilters, mergeTags } from '@/lib/library/searchSummary';
 import { useSmartSearch } from '@/lib/library/useSmartSearch';
 import { Food } from '@/lib/library/types';
@@ -130,7 +131,7 @@ export default function Library() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title} accessibilityRole="header">your library</Text>
-            <Text style={styles.count}>{foods.length} foods · {dishCount} dishes</Text>
+            {!loading && <Text style={styles.count}>{libraryCountLabel(foods.length, dishCount)}</Text>}
           </View>
           <Pressable
             accessibilityRole="button"

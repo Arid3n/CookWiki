@@ -73,10 +73,12 @@ export default function LoginScreen() {
             placeholder="Password"
             placeholderTextColor={colors.sub}
             accessibilityLabel="Password"
+            returnKeyType="go"
+            onSubmitEditing={signInWithEmail}
           />
           <Pressable
             onPress={() => setShowPassword((v) => !v)}
-            hitSlop={12}
+            hitSlop={14}
             accessibilityRole="button"
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
           >
@@ -94,7 +96,7 @@ export default function LoginScreen() {
             accessibilityLabel={loading ? 'Signing in…' : 'Sign in'}
           />
         </View>
-        <Pressable onPress={signUpWithEmail} disabled={loading} accessibilityRole="button" style={styles.altWrap}>
+        <Pressable onPress={signUpWithEmail} disabled={loading} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }} style={styles.altWrap}>
           <Text style={styles.alt}>
             No account? <Text style={styles.altBold}>Register</Text>
           </Text>

@@ -8,6 +8,8 @@ import { colors, fonts, space } from '@/lib/ui/theme';
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_GEMINI_MODEL, getGeminiConfig, setGeminiKey, setGeminiModel } from '@/lib/gemini/config';
 
+const isErrorStatus = (s: string) => s.startsWith('Could not');
+
 export default function Settings() {
   const insets = useSafeAreaInsets();
   const [key, setKey] = useState('');
@@ -116,7 +118,7 @@ export default function Settings() {
           <Pressable accessibilityRole="button" onPress={removeKey} style={styles.secondary}>
             <Text style={styles.secondaryText}>Remove key</Text>
           </Pressable>
-          {!!status && <Text style={styles.status} accessibilityLiveRegion="polite">{status}</Text>}
+          {!!status && <Text style={[styles.status, isErrorStatus(status) && styles.statusError]} accessibilityLiveRegion="polite">{status}</Text>}
         </View>
 
         <View style={styles.card}>
@@ -168,4 +170,5 @@ const styles = StyleSheet.create({
   secondaryText: { color: colors.text, fontFamily: fonts.bodyBold, fontSize: 16 },
   signOutText: { color: colors.dangerText, fontFamily: fonts.bodyBold, fontSize: 16 },
   status: { color: colors.sage, fontFamily: fonts.body, marginTop: 12, fontSize: 14 },
+  statusError: { color: colors.dangerText },
 });

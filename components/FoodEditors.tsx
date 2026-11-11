@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Macros } from '@/lib/library/types';
 import { normalizeTags, parseMacroValue, withRangeReset } from '@/lib/library/validate';
-import { colors, fonts } from '@/lib/ui/theme';
+import { colors, fonts, space } from '@/lib/ui/theme';
 
 interface Common { busy: boolean; onCancel: () => void }
 
@@ -124,7 +124,7 @@ export function MacroEditor({ initial, busy, onCancel, onSave }: Common & { init
 }
 
 const s = StyleSheet.create({
-  box: { backgroundColor: colors.surface, borderRadius: 18, padding: 14, marginTop: 12, marginHorizontal: 16, gap: 8 },
+  box: { backgroundColor: colors.surface, borderRadius: 18, padding: 14, marginTop: 12, marginHorizontal: space.gutter, gap: 8 },
   input: {
     minHeight: 44, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.surface2,
     borderBottomWidth: 2, borderBottomColor: colors.rust, color: colors.text, fontFamily: fonts.body, fontSize: 16,

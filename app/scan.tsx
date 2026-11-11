@@ -153,7 +153,7 @@ export default function Scan() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Pressable
-          accessibilityRole="button" accessibilityLabel="Back" style={styles.back}
+          accessibilityRole="button" accessibilityLabel="Back" style={styles.back} hitSlop={6}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/library'))}
         >
           <Icon name="back" size={18} color={colors.text} />
