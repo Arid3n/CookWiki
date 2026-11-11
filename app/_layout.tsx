@@ -1,5 +1,5 @@
 import { Stack, router } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import CalculatorFab from "@/components/CalculatorFab";
@@ -19,9 +19,14 @@ const syncQuietly = () => {
 
 export default function RootLayout() {
   const fontsReady = useAppFonts();
+  // Router calls before the Stack mounts (font gate) would throw; set once mounted.
+  const navReady = useRef(false);
 
   useEffect(() => {
-    if (fontsReady) SplashScreen.hideAsync().catch(() => {});
+    if (fontsReady) {
+      navReady.current = true;
+      SplashScreen.hideAsync().catch(() => {});
+    }
   }, [fontsReady]);
 
   useEffect(() => {
@@ -37,11 +42,13 @@ export default function RootLayout() {
           ),
         );
         // Drop the previous user's screens so back-navigation cannot reach them.
-        if (router.canDismiss()) router.dismissAll();
-        router.replace('/login');
+        if (navReady.current) {
+          if (router.canDismiss()) router.dismissAll();
+          router.replace('/login');
+        }
       } else if (event === 'SIGNED_IN') {
         syncQuietly();
-        router.replace('/library');
+        if (navReady.current) router.replace('/library');
       }
     });
 

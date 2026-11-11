@@ -10,6 +10,7 @@ import { OfflineError } from '@/lib/library/errors';
 import { listFoods, updateFood } from '@/lib/library/repository';
 import { saveFromChat } from '@/lib/library/saveFromChat';
 import type { Food, FoodKind } from '@/lib/library/types';
+import Hero from '@/components/ui/Hero';
 import Icon from '@/components/ui/Icon';
 import { colors, fonts, space } from '@/lib/ui/theme';
 
@@ -150,16 +151,19 @@ export default function Scan() {
   const kindLabel = (k: FoodKind) => (k === 'dish' ? 'Dishes' : 'Single foods');
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button" accessibilityLabel="Back" style={styles.back} hitSlop={6}
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/library'))}
-        >
-          <Icon name="back" size={18} color={colors.text} />
-        </Pressable>
-        <Text style={styles.title} accessibilityRole="header">Scan label</Text>
-      </View>
+    <View style={styles.screen}>
+      <Hero height={108} seed={6}>
+        <View style={styles.header}>
+          <Pressable
+            accessibilityRole="button" accessibilityLabel="Back" style={styles.back} hitSlop={6}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/library'))}
+          >
+            <Icon name="back" size={18} color={colors.text} />
+          </Pressable>
+          <Text style={styles.title} accessibilityRole="header">scan</Text>
+          <View style={styles.spacer} />
+        </View>
+      </Hero>
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: 96 + insets.bottom }]}>
         <Text style={styles.text}>
           Take a photo of a nutrition label. Values are saved per 100 g. The photo is not stored.
@@ -222,9 +226,10 @@ function Btn({ label, onPress, disabled }: { label: string; onPress: () => void;
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.ringFill },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space.gutter, height: 56 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: 12 },
+  spacer: { width: 36, height: 36 },
   back: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.scrim },
-  title: { color: colors.text, fontFamily: fonts.heading, fontSize: 18 },
+  title: { color: colors.text, fontFamily: fonts.display, fontSize: 44, lineHeight: 48, textTransform: 'uppercase' },
   body: { padding: space.gutter, gap: 16 },
   text: { color: colors.text, fontFamily: fonts.body, fontSize: 16 },
   errorText: { color: colors.dangerText, fontFamily: fonts.body, fontSize: 16 },

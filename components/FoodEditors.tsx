@@ -133,7 +133,7 @@ const s = StyleSheet.create({
   field: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   fieldLabel: { color: colors.text, fontFamily: fonts.body, fontSize: 15, flex: 1 },
   hint: { color: colors.sub, fontFamily: fonts.body, fontSize: 13 },
-  error: { color: colors.danger, fontFamily: fonts.body, fontSize: 14 },
+  error: { color: colors.dangerText, fontFamily: fonts.body, fontSize: 14 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 22, backgroundColor: colors.surface2 },
   tagText: { color: colors.text, fontFamily: fonts.body, fontSize: 14 },

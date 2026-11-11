@@ -32,12 +32,15 @@ export default function PortionCalculator({ macros }: { macros: Macros }) {
         />
         <Text style={styles.unit}>g</Text>
       </View>
-      <View style={styles.result} accessibilityLiveRegion="polite">
+      <View style={styles.result} accessibilityLiveRegion={result ? 'polite' : 'none'}>
         <Text style={styles.label} accessibilityRole="header">Your portion</Text>
         {result ? (
           <>
             <Text style={styles.kcal}>{fmt(result.kcal)} kcal</Text>
-            <Text style={styles.macros}>
+            <Text
+              style={styles.macros}
+              accessibilityLabel={`Protein ${fmt(result.protein)} g, carbs ${fmt(result.carbs)} g, fat ${fmt(result.fat)} g`}
+            >
               P {fmt(result.protein)} · C {fmt(result.carbs)} · F {fmt(result.fat)}
             </Text>
             {extra.length > 0 && <Text style={styles.macros}>{extra.join(' · ')}</Text>}
@@ -60,6 +63,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: space.gutter,
     marginTop: 12,
+    marginHorizontal: space.gutter,
   },
   inputBox: {
     width: 96,

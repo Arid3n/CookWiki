@@ -16,6 +16,7 @@ export default function LoginScreen() {
   const keyboardHeight = useKeyboardHeight();
 
   async function signInWithEmail() {
+    if (loading) return;
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) Alert.alert('Login Failed', error.message);
@@ -24,6 +25,7 @@ export default function LoginScreen() {
   }
 
   async function signUpWithEmail() {
+    if (loading) return;
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) Alert.alert('Registration Failed', error.message);
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   heroText: { position: 'absolute', left: space.gutter, right: space.gutter, bottom: 34 },
   tag: { fontFamily: fonts.name, fontSize: 11, color: colors.peach },
-  title: { fontFamily: fonts.display, fontSize: 104, lineHeight: 84, color: colors.text, marginTop: 6 },
+  title: { fontFamily: fonts.display, fontSize: 104, lineHeight: 92, color: colors.text, marginTop: 6 },
   form: { paddingHorizontal: space.gutter, paddingTop: 8 },
   label: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.text, marginBottom: 2 },
   labelNext: { marginTop: 14 },

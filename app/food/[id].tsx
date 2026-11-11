@@ -18,7 +18,7 @@ import { variantKcalLabel } from '@/lib/library/kcalLabel';
 import { confirm } from '@/lib/ui/confirm';
 import { colors, fonts, space } from '@/lib/ui/theme';
 
-/** Clears the global calculator FAB (bottom 96 + inset, 48 tall) with breathing room. */
+/** Clears the global calculator FAB (bottom 96 + inset, 56 tall) with breathing room. */
 const BOTTOM_PADDING = 160;
 const HERO_HEIGHT = 172;
 
@@ -211,7 +211,7 @@ export default function FoodCard() {
         <MacroEditor key={selected.id} initial={selected} busy={busy} onCancel={() => setEditing(null)}
           onSave={(patch) => closeAfter(run(() => updateVariant(selected.id, patch)))} />
       ) : (
-        <View style={styles.card}>
+        <View style={styles.macroWrap}>
           <Text style={styles.cardTitle} accessibilityRole="header">Per 100 g</Text>
           <MacroLines m={selected} />
           {range && <Text style={styles.meta}>{range}</Text>}
@@ -273,6 +273,7 @@ const styles = StyleSheet.create({
   chip: { backgroundColor: colors.surface2, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   chipText: { color: colors.sub, fontFamily: fonts.body, fontSize: 12 },
   section: { marginTop: 12, marginHorizontal: space.gutter },
+  macroWrap: { marginHorizontal: space.gutter, marginTop: 12 },
   card: { backgroundColor: colors.surface, borderRadius: 18, padding: 14, marginTop: 12, marginHorizontal: space.gutter },
   cardTitle: { color: colors.text, fontFamily: fonts.bodyBold, fontSize: 15, marginBottom: 6 },
   meta: { color: colors.sub, fontFamily: fonts.body, fontSize: 13, marginTop: 4 },
@@ -287,6 +288,6 @@ const styles = StyleSheet.create({
   actions: { marginTop: 12, marginHorizontal: space.gutter },
   action: { minHeight: 44, justifyContent: 'center' },
   actionText: { color: colors.sub, fontFamily: fonts.body, fontSize: 14 },
-  danger: { color: colors.danger },
+  danger: { color: colors.dangerText },
   disabled: { opacity: 0.5 },
 });

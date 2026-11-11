@@ -367,8 +367,8 @@ const styles = StyleSheet.create({
   },
   spacer: { width: 36, height: 36 },
   title: { color: colors.text, fontFamily: fonts.display, fontSize: 44, lineHeight: 48, textTransform: 'uppercase' },
-  // Bottom padding keeps the last bubble clear of the dock and the calculator FAB above it.
-  list: { padding: space.gutter, gap: 8, paddingBottom: 72, flexGrow: 1 },
+  // Bottom padding keeps the last bubble clear of the dock (8+56+8 = 72); the 56 FAB sits above it.
+  list: { padding: space.gutter, gap: 8, paddingBottom: 88, flexGrow: 1 },
   empty: { color: colors.sub, fontFamily: fonts.body, textAlign: 'center', marginTop: 48, paddingHorizontal: 24, fontSize: 15 },
   spinner: { marginVertical: 8 },
   bubble: { maxWidth: '85%', borderRadius: 18, padding: 12, gap: 8 },
