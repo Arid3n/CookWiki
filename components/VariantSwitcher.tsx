@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     minHeight: 44, paddingHorizontal: 14, borderRadius: 12,
   },
   chipOn: { backgroundColor: colors.peach },
-  chipText: { color: colors.sub, fontFamily: fonts.name, fontSize: 14 },
+  chipText: { color: colors.sub, fontFamily: fonts.body, fontSize: 14 },
   chipTextOn: { color: colors.ink, fontFamily: fonts.bodyBold },
   // Default variant marker (replaces the old star icon).
   defaultDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.gold },
