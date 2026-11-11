@@ -42,6 +42,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
         <Stack.Screen name="library" />
+        <Stack.Screen name="settings" />
         <Stack.Screen name="calculator" options={{ presentation: "modal", headerShown: false }} />
       </Stack>
       <CalculatorFab />
