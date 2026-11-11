@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Macros } from '@/lib/library/types';
 import { normalizeTags, parseMacroValue, withRangeReset } from '@/lib/library/validate';
+import { colors, fonts } from '@/lib/ui/theme';
 
 interface Common { busy: boolean; onCancel: () => void }
 
@@ -34,7 +35,7 @@ export function NameEditor({ initial, busy, onCancel, onSave }: Common & { initi
     <View style={s.box}>
       <TextInput
         accessibilityLabel="Food name" style={s.input} value={text} onChangeText={setText}
-        autoFocus placeholderTextColor="#94A3B8"
+        autoFocus placeholderTextColor={colors.sub}
       />
       {error && <Text style={s.error} accessibilityLiveRegion="polite">{error}</Text>}
       <Buttons busy={busy} onCancel={onCancel} onSave={save} />
@@ -64,7 +65,7 @@ export function TagEditor({ initial, busy, onCancel, onSave }: Common & { initia
       <View style={s.addRow}>
         <TextInput
           accessibilityLabel="New tag" style={[s.input, { flex: 1 }]} value={text} onChangeText={setText}
-          onSubmitEditing={add} placeholder="Add tag (max 12)" placeholderTextColor="#94A3B8"
+          onSubmitEditing={add} placeholder="Add tag (max 12)" placeholderTextColor={colors.sub}
           autoCapitalize="none" maxLength={24}
         />
         <Pressable accessibilityRole="button" accessibilityLabel="Add tag" onPress={add} style={[s.btn, s.primary]}>
@@ -123,21 +124,24 @@ export function MacroEditor({ initial, busy, onCancel, onSave }: Common & { init
 }
 
 const s = StyleSheet.create({
-  box: { backgroundColor: '#1E293B', borderRadius: 12, padding: 14, marginTop: 12, gap: 8 },
-  input: { minHeight: 44, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#0F172A', color: '#F1F5F9', fontSize: 16 },
+  box: { backgroundColor: colors.surface, borderRadius: 18, padding: 14, marginTop: 12, marginHorizontal: 16, gap: 8 },
+  input: {
+    minHeight: 44, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.surface2,
+    borderBottomWidth: 2, borderBottomColor: colors.rust, color: colors.text, fontFamily: fonts.body, fontSize: 16,
+  },
   num: { width: 110, textAlign: 'right' },
   field: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  fieldLabel: { color: '#F1F5F9', fontSize: 15, flex: 1 },
-  hint: { color: '#94A3B8', fontSize: 13 },
-  error: { color: '#F87171', fontSize: 14 },
+  fieldLabel: { color: colors.text, fontFamily: fonts.body, fontSize: 15, flex: 1 },
+  hint: { color: colors.sub, fontFamily: fonts.body, fontSize: 13 },
+  error: { color: colors.danger, fontFamily: fonts.body, fontSize: 14 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 22, backgroundColor: '#0F172A' },
-  tagText: { color: '#F1F5F9', fontSize: 14 },
+  tag: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 22, backgroundColor: colors.surface2 },
+  tagText: { color: colors.text, fontFamily: fonts.body, fontSize: 14 },
   addRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-  btn: { minHeight: 44, minWidth: 72, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, borderRadius: 10 },
-  btnText: { color: '#94A3B8', fontSize: 15 },
-  primary: { backgroundColor: '#10B981' },
-  primaryText: { color: '#0F172A', fontSize: 15, fontWeight: '600' },
+  btn: { minHeight: 44, minWidth: 72, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, borderRadius: 22 },
+  btnText: { color: colors.sub, fontFamily: fonts.body, fontSize: 15 },
+  primary: { backgroundColor: colors.peach },
+  primaryText: { color: colors.ink, fontFamily: fonts.bodyBold, fontSize: 15 },
   disabled: { opacity: 0.5 },
 });

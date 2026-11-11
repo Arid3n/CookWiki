@@ -1,4 +1,4 @@
-import { kcalLabel } from '../kcalLabel';
+import { kcalLabel, variantKcalLabel } from '../kcalLabel';
 import { Food, Variant } from '../types';
 
 const v = (kcal: number, isDefault = true, o: Partial<Variant> = {}): Variant => ({
@@ -23,5 +23,17 @@ describe('kcalLabel', () => {
   });
   it('uses the default variant', () => {
     expect(kcalLabel(food([v(50, false), v(200, true)]))).toBe('200');
+  });
+});
+
+describe('variantKcalLabel', () => {
+  it('rounds kcal', () => {
+    expect(variantKcalLabel(v(96.4))).toBe('96');
+  });
+  it('shows a range when both bounds are set', () => {
+    expect(variantKcalLabel(v(100, false, { kcalMin: 80.2, kcalMax: 119.6 }))).toBe('80–120');
+  });
+  it('ignores a half-set range', () => {
+    expect(variantKcalLabel(v(101.6, false, { kcalMax: 120 }))).toBe('102');
   });
 });
