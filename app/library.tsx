@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Pressable, RefreshControl, ScrollView, SectionList, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FoodRow from '@/components/FoodRow';
 import ChatBar from '@/components/ChatBar';
 import { listFoods, syncFromSupabase } from '@/lib/library/repository';
-import { applyFilters } from '@/lib/library/search';
+import { normalizeName } from '@/lib/library/duplicates';
+import { applyFilters, distinctTags } from '@/lib/library/search';
 import { sortFoods } from '@/lib/library/sort';
 import { Food } from '@/lib/library/types';
 
@@ -26,6 +27,7 @@ export default function Library() {
   const [refreshing, setRefreshing] = useState(false);
   const [offline, setOffline] = useState(false);
   const [query, setQuery] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const mounted = useRef(true);
   const requestId = useRef(0);
@@ -71,21 +73,41 @@ export default function Library() {
   // SEAM (Task 14): AI search interpretation hooks in here. Does nothing yet.
   const onSubmitSearch = useCallback((_text: string) => {}, []);
 
+  const allTags = useMemo(() => distinctTags(foods), [foods]);
+
+  // Drop selections whose tag no longer exists (e.g. after a refresh); otherwise
+  // an invisible chip would keep filtering everything out.
+  const activeTags = useMemo(
+    () => selectedTags.filter((t) => allTags.some((a) => normalizeName(a) === normalizeName(t))),
+    [selectedTags, allTags],
+  );
+
+  const toggleTag = useCallback((tag: string) => {
+    setSelectedTags((prev) =>
+      prev.some((t) => normalizeName(t) === normalizeName(tag))
+        ? prev.filter((t) => normalizeName(t) !== normalizeName(tag))
+        : [...prev, tag],
+    );
+  }, []);
+
   const sections = useMemo(() => {
-    const visible = applyFilters(foods, { text: query.trim() || undefined });
+    const visible = applyFilters(foods, {
+      text: query.trim() || undefined,
+      tags: activeTags.length > 0 ? activeTags : undefined,
+    });
     const dishes = sortFoods(visible.filter((f) => f.kind === 'dish'));
     const singles = sortFoods(visible.filter((f) => f.kind === 'single'));
     return [
       { title: 'Dishes', data: dishes },
       { title: 'Single foods', data: singles },
     ].filter((s) => s.data.length > 0);
-  }, [foods, query]);
+  }, [foods, query, activeTags]);
 
   const openFood = useCallback((id: string) => {
     router.push({ pathname: '/food/[id]', params: { id } });
   }, []);
 
-  const searching = query.trim().length > 0;
+  const searching = query.trim().length > 0 || activeTags.length > 0;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -126,6 +148,43 @@ export default function Library() {
           </Pressable>
         )}
       </View>
+
+      {allTags.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipRow}
+          accessibilityLabel="Filter by tag"
+        >
+          {activeTags.length > 0 && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Clear tag filters"
+              onPress={() => setSelectedTags([])}
+              style={styles.chip}
+            >
+              <Text style={styles.clearChipText}>Clear</Text>
+            </Pressable>
+          )}
+          {allTags.map((tag) => {
+            const selected = activeTags.some((t) => normalizeName(t) === normalizeName(tag));
+            return (
+              <Pressable
+                key={tag}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by tag ${tag}`}
+                accessibilityState={{ selected }}
+                onPress={() => toggleTag(tag)}
+                style={[styles.chip, selected && styles.chipSelected]}
+              >
+                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{tag}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {offline && (
         <View style={styles.banner} accessibilityLiveRegion="polite">
@@ -180,6 +239,17 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, minHeight: 44, color: '#F1F5F9', fontSize: 16 },
   clear: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginRight: -12 },
+  chipScroll: { flexGrow: 0 },
+  chipRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
+  chip: {
+    minHeight: 44, minWidth: 44, paddingHorizontal: 14, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#1E293B',
+    borderWidth: 1, borderColor: '#334155',
+  },
+  chipSelected: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  chipText: { color: '#CBD5E1', fontSize: 14 },
+  chipTextSelected: { color: '#0F172A', fontWeight: '600' },
+  clearChipText: { color: '#10B981', fontSize: 14, fontWeight: '600' },
   banner: { marginHorizontal: 16, marginBottom: 4, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#1E293B' },
   bannerText: { color: '#94A3B8', fontSize: 13 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

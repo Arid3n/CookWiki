@@ -41,3 +41,16 @@ export function applyFilters(foods: Food[], f: SearchFilters): Food[] {
   const kept = foods.filter((food) => matches(food, f));
   return [...kept.filter((x) => x.pinned), ...kept.filter((x) => !x.pinned)];
 }
+
+/** All distinct tags in the library (trimmed, lowercased), sorted. Dedupes on normalized form. */
+export function distinctTags(foods: Food[]): string[] {
+  const byKey = new Map<string, string>();
+  for (const food of foods) {
+    for (const raw of food.tags) {
+      const tag = raw.trim().toLowerCase();
+      const key = normalizeName(tag);
+      if (key && !byKey.has(key)) byKey.set(key, tag);
+    }
+  }
+  return [...byKey.values()].sort((a, b) => a.localeCompare(b));
+}

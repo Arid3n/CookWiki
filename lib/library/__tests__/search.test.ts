@@ -1,4 +1,4 @@
-import { applyFilters, defaultVariant } from '../search';
+import { applyFilters, defaultVariant, distinctTags } from '../search';
 import { Food, Variant } from '../types';
 
 const v = (foodId: string, kcal: number, isDefault = true, extra: Partial<Variant> = {}): Variant => ({
@@ -67,5 +67,19 @@ describe('applyFilters', () => {
     const fs = [food('a', { variants: [] }), food('b')];
     expect(applyFilters(fs, {}).map((f) => f.id)).toEqual(['a', 'b']);
     expect(applyFilters(fs, { maxKcal: 1000 }).map((f) => f.id)).toEqual(['b']);
+  });
+});
+
+describe('distinctTags', () => {
+  it('returns sorted distinct tags across foods', () => {
+    const foods = [food('a', { tags: ['snack', 'post-workout'] }), food('b', { tags: ['breakfast', 'snack'] })];
+    expect(distinctTags(foods)).toEqual(['breakfast', 'post-workout', 'snack']);
+  });
+  it('dedupes case/whitespace variants and drops empties', () => {
+    const foods = [food('a', { tags: ['Snack', ' snack ', ''] }), food('b', { tags: ['  '] })];
+    expect(distinctTags(foods)).toEqual(['snack']);
+  });
+  it('returns empty when no tags', () => {
+    expect(distinctTags([food('a')])).toEqual([]);
   });
 });
