@@ -12,6 +12,8 @@ export const colors = {
   ringFill: '#120B07',
   rust: '#c16b27',
   danger: '#B5524A',
+  shadow: '#000000',
+  ringEdge: 'rgba(202,179,86,0.3)',
 } as const;
 
 export const fonts = {
