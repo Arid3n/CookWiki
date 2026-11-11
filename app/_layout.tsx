@@ -3,13 +3,26 @@ import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import CalculatorFab from "@/components/CalculatorFab";
+import { syncFromSupabase } from "@/lib/library/repository";
+import { clearLocalLibrary } from "@/lib/library/localDb";
+
+// A failed sync is silent: the library keeps showing the local copy.
+const syncQuietly = () => {
+  syncFromSupabase().catch(() => {});
+};
 
 export default function RootLayout() {
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) syncQuietly();
+    });
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
+        clearLocalLibrary().catch(() => {});
         router.replace('/login');
       } else if (event === 'SIGNED_IN') {
+        syncQuietly();
         router.replace('/library');
       }
     });
