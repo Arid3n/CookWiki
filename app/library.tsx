@@ -212,7 +212,7 @@ export default function Library() {
           ListEmptyComponent={
             <Text style={styles.empty}>
               {searching
-                ? `No foods match '${query.trim()}'`
+                ? (query.trim() ? `No foods match '${query.trim()}'` : 'No foods match the selected tags')
                 : "Your library is empty. Ask the chat about a food and say 'save it'."}
             </Text>
           }
