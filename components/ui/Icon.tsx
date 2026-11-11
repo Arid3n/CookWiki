@@ -72,6 +72,12 @@ const ICONS = {
       <Path d="M5 19l8-8" />
     </>
   ),
+  backspace: (
+    <>
+      <Path d="M9 5h11v14H9l-6-7z" />
+      <Path d="M12.5 9.5l5 5M17.5 9.5l-5 5" />
+    </>
+  ),
   close: <Path d="M6 6l12 12M18 6L6 18" />,
 };
 

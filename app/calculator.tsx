@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from '@/components/ui/Icon';
+import { colors, fonts, space } from '@/lib/ui/theme';
 import { formatResult, useCalculatorStore } from '@/store/calculatorStore';
 
 const ROWS: string[][] = [
@@ -37,13 +39,18 @@ function Key({ k, wide }: { k: string; wide?: boolean }) {
       style={({ pressed }) => [
         styles.key,
         wide && styles.wide,
+        isOperator(k) && styles.opKey,
         k === '=' && styles.equals,
         pressed && styles.pressed,
       ]}
     >
-      <Text style={[styles.keyText, (isOperator(k) || k === 'C') && styles.opText, k === '=' && styles.equalsText]}>
-        {k}
-      </Text>
+      {k === '⌫' ? (
+        <Icon name="backspace" size={24} color={colors.text} />
+      ) : (
+        <Text style={[styles.keyText, isOperator(k) && styles.opText, k === 'C' && styles.clearText, k === '=' && styles.equalsText]}>
+          {k}
+        </Text>
+      )}
     </Pressable>
   );
 }
@@ -63,7 +70,7 @@ export default function Calculator() {
           hitSlop={8}
           style={styles.close}
         >
-          <Text style={styles.closeText}>✕</Text>
+          <Icon name="close" size={22} color={colors.text} />
         </Pressable>
       </View>
 
@@ -93,27 +100,28 @@ export default function Calculator() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F172A', paddingHorizontal: 12 },
+  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: space.gutter },
   header: { flexDirection: 'row', justifyContent: 'flex-end' },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  closeText: { color: '#F1F5F9', fontSize: 22 },
   display: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 8, paddingBottom: 12, minHeight: 80 },
-  expression: { color: '#94A3B8', fontSize: 28, textAlign: 'right' },
-  result: { color: '#F1F5F9', fontSize: 44, fontWeight: '600', textAlign: 'right', minHeight: 56 },
+  expression: { color: colors.sub, fontFamily: fonts.body, fontSize: 28, textAlign: 'right' },
+  result: { color: colors.text, fontFamily: fonts.heading, fontSize: 52, textAlign: 'right', minHeight: 64 },
   pad: { gap: 8 },
   row: { flexDirection: 'row', gap: 8 },
   key: {
     flex: 1,
     minHeight: 56,
-    borderRadius: 14,
-    backgroundColor: '#1E293B',
+    borderRadius: 28,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   wide: { flex: 1 },
-  equals: { backgroundColor: '#10B981' },
+  opKey: { backgroundColor: colors.gold },
+  equals: { backgroundColor: colors.peach },
   pressed: { opacity: 0.7 },
-  keyText: { color: '#F1F5F9', fontSize: 24 },
-  opText: { color: '#10B981' },
-  equalsText: { color: '#0F172A', fontWeight: '700' },
+  keyText: { color: colors.text, fontFamily: fonts.heading, fontSize: 24 },
+  opText: { color: colors.ink },
+  clearText: { color: colors.peach },
+  equalsText: { color: colors.ink },
 });

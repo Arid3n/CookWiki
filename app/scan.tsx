@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { InvalidSaveError, SaveFoodArgs } from '@/lib/gemini/chatTools';
@@ -11,6 +10,8 @@ import { OfflineError } from '@/lib/library/errors';
 import { listFoods, updateFood } from '@/lib/library/repository';
 import { saveFromChat } from '@/lib/library/saveFromChat';
 import type { Food, FoodKind } from '@/lib/library/types';
+import Icon from '@/components/ui/Icon';
+import { colors, fonts, space } from '@/lib/ui/theme';
 
 type Result =
   | { type: 'saved'; food: Food; variant: boolean }
@@ -155,7 +156,7 @@ export default function Scan() {
           accessibilityRole="button" accessibilityLabel="Back" style={styles.back}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/library'))}
         >
-          <Ionicons name="chevron-back" size={24} color="#F1F5F9" />
+          <Icon name="back" size={18} color={colors.text} />
         </Pressable>
         <Text style={styles.title} accessibilityRole="header">Scan label</Text>
       </View>
@@ -164,11 +165,11 @@ export default function Scan() {
           Take a photo of a nutrition label. Values are saved per 100 g. The photo is not stored.
         </Text>
         <Btn label={busy ? 'Working...' : 'Take photo'} disabled={busy} onPress={takePhoto} />
-        {busy && <ActivityIndicator color="#10B981" style={styles.spinner} />}
+        {busy && <ActivityIndicator color={colors.peach} style={styles.spinner} />}
 
         {result?.type === 'error' && (
           <View style={styles.card} accessibilityLiveRegion="polite">
-            <Text style={styles.text}>{result.text}</Text>
+            <Text style={styles.errorText}>{result.text}</Text>
             {result.settings && <Btn label="Open Settings" onPress={() => router.push('/settings')} />}
             {result.permission && <Btn label="Open phone settings" onPress={() => Linking.openSettings()} />}
           </View>
@@ -189,7 +190,7 @@ export default function Scan() {
                 />
               )}
             </View>
-            {moveError && <Text style={styles.text}>{moveError}</Text>}
+            {moveError && <Text style={styles.errorText}>{moveError}</Text>}
           </View>
         )}
 
@@ -220,19 +221,20 @@ function Btn({ label, onPress, disabled }: { label: string; onPress: () => void;
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0F172A' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, height: 56 },
-  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#F1F5F9', fontSize: 18, fontWeight: '600' },
-  body: { padding: 16, gap: 16 },
-  text: { color: '#F1F5F9', fontSize: 16 },
+  screen: { flex: 1, backgroundColor: colors.ringFill },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space.gutter, height: 56 },
+  back: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.scrim },
+  title: { color: colors.text, fontFamily: fonts.heading, fontSize: 18 },
+  body: { padding: space.gutter, gap: 16 },
+  text: { color: colors.text, fontFamily: fonts.body, fontSize: 16 },
+  errorText: { color: colors.dangerText, fontFamily: fonts.body, fontSize: 16 },
   spinner: { marginVertical: 8 },
-  card: { backgroundColor: '#1E293B', borderRadius: 16, padding: 12, gap: 12 },
+  card: { backgroundColor: colors.surface, borderRadius: 18, padding: 14, gap: 12 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   btn: {
-    minHeight: 44, paddingHorizontal: 16, borderRadius: 22, backgroundColor: '#10B981',
+    minHeight: 44, paddingHorizontal: 18, borderRadius: 22, backgroundColor: colors.peach,
     alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start',
   },
-  btnText: { color: '#0F172A', fontSize: 15, fontWeight: '600' },
+  btnText: { color: colors.ink, fontFamily: fonts.bodyBold, fontSize: 15 },
   disabled: { opacity: 0.5 },
 });

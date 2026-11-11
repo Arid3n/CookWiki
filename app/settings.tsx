@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Hero from '@/components/ui/Hero';
+import Icon from '@/components/ui/Icon';
+import { colors, fonts, space } from '@/lib/ui/theme';
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_GEMINI_MODEL, getGeminiConfig, setGeminiKey, setGeminiModel } from '@/lib/gemini/config';
 
@@ -55,98 +58,114 @@ export default function Settings() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ padding: 20, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.header}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { Keyboard.dismiss(); router.back(); }} hitSlop={10}>
-          <Text style={styles.link}>‹ Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Settings</Text>
-      </View>
+    <View style={styles.container}>
+      <Hero height={132} seed={5}>
+        <View style={styles.heroRow}>
+          <Pressable
+            accessibilityRole="button" accessibilityLabel="Back" hitSlop={6} style={styles.round}
+            onPress={() => { Keyboard.dismiss(); router.back(); }}
+          >
+            <Icon name="back" size={18} color={colors.text} />
+          </Pressable>
+          <Text style={styles.title} accessibilityRole="header">settings</Text>
+          <View style={styles.spacer} />
+        </View>
+      </Hero>
+      <ScrollView
+        contentContainerStyle={{ padding: space.gutter, paddingBottom: insets.bottom + 24 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.card}>
+          <Text style={styles.section}>Gemini</Text>
+          <Text style={styles.hint}>
+            Your own API key, stored only on this device. {hasKey ? 'A key is saved.' : 'No key saved yet.'}
+          </Text>
 
-      <Text style={styles.section}>Gemini</Text>
-      <Text style={styles.hint}>
-        Your own API key, stored only on this device. {hasKey ? 'A key is saved.' : 'No key saved yet.'}
-      </Text>
+          <Text style={styles.label}>API key</Text>
+          <View style={styles.row}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              value={key}
+              onChangeText={setKey}
+              secureTextEntry={!show}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder={hasKey ? 'Key saved (hidden)' : 'Paste your Gemini API key'}
+              placeholderTextColor={colors.sub}
+              accessibilityLabel="Gemini API key"
+            />
+            <Pressable accessibilityRole="button" accessibilityLabel={show ? 'Hide API key' : 'Show API key'} onPress={() => setShow((s) => !s)} style={styles.toggle}>
+              <Text style={styles.link}>{show ? 'Hide' : 'Show'}</Text>
+            </Pressable>
+          </View>
 
-      <Text style={styles.label}>API key</Text>
-      <View style={styles.row}>
-        <TextInput
-          style={[styles.input, { flex: 1 }]}
-          value={key}
-          onChangeText={setKey}
-          secureTextEntry={!show}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder={hasKey ? 'Key saved (hidden)' : 'Paste your Gemini API key'}
-          placeholderTextColor="#64748B"
-          accessibilityLabel="Gemini API key"
-        />
-        <Pressable accessibilityRole="button" accessibilityLabel={show ? 'Hide API key' : 'Show API key'} onPress={() => setShow((s) => !s)} style={styles.toggle}>
-          <Text style={styles.link}>{show ? 'Hide' : 'Show'}</Text>
-        </Pressable>
-      </View>
+          <Text style={styles.label}>Model</Text>
+          <TextInput
+            style={styles.input}
+            value={model}
+            onChangeText={setModel}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholderTextColor={colors.sub}
+            accessibilityLabel="Gemini model"
+          />
 
-      <Text style={styles.label}>Model</Text>
-      <TextInput
-        style={styles.input}
-        value={model}
-        onChangeText={setModel}
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholderTextColor="#64748B"
-        accessibilityLabel="Gemini model"
-      />
+          <Pressable accessibilityRole="button" onPress={save} style={styles.primary}>
+            <Text style={styles.primaryText}>Save</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={removeKey} style={styles.secondary}>
+            <Text style={styles.secondaryText}>Remove key</Text>
+          </Pressable>
+          {!!status && <Text style={styles.status} accessibilityLiveRegion="polite">{status}</Text>}
+        </View>
 
-      <Pressable accessibilityRole="button" onPress={save} style={styles.primary}>
-        <Text style={styles.primaryText}>Save</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" onPress={removeKey} style={styles.secondary}>
-        <Text style={styles.secondaryText}>Remove key</Text>
-      </Pressable>
-      {!!status && <Text style={styles.status} accessibilityLiveRegion="polite">{status}</Text>}
-
-      <Text style={[styles.section, { marginTop: 36 }]}>Account</Text>
-      <Pressable accessibilityRole="button" onPress={signOut} style={styles.secondary}>
-        <Text style={styles.secondaryText}>Sign out</Text>
-      </Pressable>
-    </ScrollView>
+        <View style={styles.card}>
+          <Text style={styles.section}>Account</Text>
+          <Pressable accessibilityRole="button" onPress={signOut} style={styles.secondary}>
+            <Text style={styles.signOutText}>Sign out</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F172A' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
-  title: { color: '#F1F5F9', fontSize: 22, fontWeight: 'bold' },
-  link: { color: '#10B981', fontSize: 16 },
-  section: { color: '#F1F5F9', fontSize: 18, fontWeight: '600', marginBottom: 6 },
-  hint: { color: '#94A3B8', fontSize: 14, marginBottom: 16 },
-  label: { color: '#CBD5E1', fontSize: 14, marginBottom: 6, marginTop: 12 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: 12 },
+  round: {
+    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.scrim,
+  },
+  spacer: { width: 36, height: 36 },
+  title: { color: colors.text, fontFamily: fonts.display, fontSize: 44, lineHeight: 48, textTransform: 'uppercase' },
+  card: { backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 12 },
+  link: { color: colors.peach, fontFamily: fonts.bodyBold, fontSize: 15 },
+  section: { color: colors.text, fontFamily: fonts.heading, fontSize: 18, marginBottom: 6 },
+  hint: { color: colors.sub, fontFamily: fonts.body, fontSize: 14, marginBottom: 8 },
+  label: { color: colors.sub, fontFamily: fonts.bodyBold, fontSize: 13, marginBottom: 6, marginTop: 12 },
   row: { flexDirection: 'row', alignItems: 'center' },
   input: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
-    borderWidth: 1,
-    borderRadius: 10,
-    color: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    backgroundColor: colors.surface2,
+    borderRadius: 14,
+    color: colors.text,
+    fontFamily: fonts.body,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     fontSize: 16,
   },
   toggle: { paddingHorizontal: 12, paddingVertical: 10 },
-  primary: { backgroundColor: '#10B981', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 24 },
-  primaryText: { color: '#0F172A', fontSize: 16, fontWeight: '700' },
+  primary: { backgroundColor: colors.peach, borderRadius: 24, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 24 },
+  primaryText: { color: colors.ink, fontFamily: fonts.bodyBold, fontSize: 16 },
   secondary: {
-    borderColor: '#334155',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 14,
+    backgroundColor: colors.surface2,
+    borderRadius: 24,
+    minHeight: 48,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
   },
-  secondaryText: { color: '#F1F5F9', fontSize: 16 },
-  status: { color: '#10B981', marginTop: 12, fontSize: 14 },
+  secondaryText: { color: colors.text, fontFamily: fonts.bodyBold, fontSize: 16 },
+  signOutText: { color: colors.dangerText, fontFamily: fonts.bodyBold, fontSize: 16 },
+  status: { color: colors.sage, fontFamily: fonts.body, marginTop: 12, fontSize: 14 },
 });

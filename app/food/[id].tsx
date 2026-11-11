@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   kcalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, paddingHorizontal: space.gutter, marginTop: 4 },
   kcal: { color: colors.peach, fontFamily: fonts.heading, fontSize: 40 },
   kcalUnit: { color: colors.sub, fontFamily: fonts.name, fontSize: 11 },
-  message: { color: colors.danger, fontFamily: fonts.body, fontSize: 14, marginTop: 10, marginHorizontal: space.gutter },
+  message: { color: colors.dangerText, fontFamily: fonts.body, fontSize: 14, marginTop: 10, marginHorizontal: space.gutter },
   spinner: { alignSelf: 'flex-start', marginTop: 8, marginHorizontal: space.gutter },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, marginHorizontal: space.gutter },
   chip: { backgroundColor: colors.surface2, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
