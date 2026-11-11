@@ -1,33 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Keyboard, Platform, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fabBottomOffset } from '@/lib/calculator/fabLayout';
 import { supabase } from '@/lib/supabase';
+import { useKeyboardHeight } from '@/lib/ui/useKeyboardHeight';
 
-const HIDDEN_PATHS = ['/calculator', '/login'];
+const HIDDEN_PATHS = ['/calculator', '/login', '/settings', '/scan'];
 
 export default function CalculatorFab() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const [signedIn, setSignedIn] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  // Keep the FAB above the keyboard (and the ChatBar that rides on it).
-  useEffect(() => {
-    const ios = Platform.OS === 'ios';
-    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (e) =>
-      setKeyboardHeight(e.endCoordinates.height),
-    );
-    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () =>
-      setKeyboardHeight(0),
-    );
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     let active = true;

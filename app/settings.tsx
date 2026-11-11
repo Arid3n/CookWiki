@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -23,6 +23,7 @@ export default function Settings() {
   }, []);
 
   const save = async () => {
+    Keyboard.dismiss();
     try {
       if (key.trim()) await setGeminiKey(key);
       await setGeminiModel(model);
@@ -60,7 +61,7 @@ export default function Settings() {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.header}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={10}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { Keyboard.dismiss(); router.back(); }} hitSlop={10}>
           <Text style={styles.link}>‹ Back</Text>
         </Pressable>
         <Text style={styles.title}>Settings</Text>

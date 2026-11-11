@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeyboardHeight } from '@/lib/ui/useKeyboardHeight';
 
 /** Layout: 8 + 48 (scan/input/send) + 8 = 64pt, plus the bottom safe-area inset. */
 export const CHAT_BAR_HEIGHT = 64;
 
 export default function ChatBar() {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const [text, setText] = useState('');
 
   const open = () => {
@@ -18,36 +20,34 @@ export default function ChatBar() {
   };
 
   return (
-    <KeyboardAvoidingView behavior="padding">
-      <View style={[styles.bar, { paddingBottom: 8 + insets.bottom }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Scan nutrition label"
-          onPress={() => router.push('/scan')}
-          style={styles.scan}
-        >
-          <Ionicons name="camera" size={22} color="#10B981" />
-        </Pressable>
-        <TextInput
-          accessibilityLabel="Ask the chat"
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          onSubmitEditing={open}
-          placeholder="Ask about a food..."
-          placeholderTextColor="#94A3B8"
-          returnKeyType="send"
-        />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Send to chat"
-          onPress={open}
-          style={styles.send}
-        >
+    <View style={[styles.bar, { paddingBottom: 8 + (keyboardHeight > 0 ? keyboardHeight : insets.bottom) }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Scan nutrition label"
+        onPress={() => router.push('/scan')}
+        style={styles.scan}
+      >
+        <Ionicons name="camera" size={22} color="#10B981" />
+      </Pressable>
+      <TextInput
+        accessibilityLabel="Ask the chat"
+        style={styles.input}
+        value={text}
+        onChangeText={setText}
+        onSubmitEditing={open}
+        placeholder="Ask about a food..."
+        placeholderTextColor="#94A3B8"
+        returnKeyType="send"
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Send to chat"
+        onPress={open}
+        style={styles.send}
+      >
           <Ionicons name="send" size={20} color="#0F172A" />
         </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
