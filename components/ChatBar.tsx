@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/** Layout: 8 + 48 (input/send) + 8 = 64pt, plus the bottom safe-area inset. */
+/** Layout: 8 + 48 (scan/input/send) + 8 = 64pt, plus the bottom safe-area inset. */
 export const CHAT_BAR_HEIGHT = 64;
 
 export default function ChatBar() {
@@ -20,6 +20,14 @@ export default function ChatBar() {
   return (
     <KeyboardAvoidingView behavior="padding">
       <View style={[styles.bar, { paddingBottom: 8 + insets.bottom }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Scan nutrition label"
+          onPress={() => router.push('/scan')}
+          style={styles.scan}
+        >
+          <Ionicons name="camera" size={22} color="#10B981" />
+        </Pressable>
         <TextInput
           accessibilityLabel="Ask the chat"
           style={styles.input}
@@ -62,6 +70,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E293B',
     color: '#F1F5F9',
     fontSize: 16,
+  },
+  scan: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   send: {
     width: 48,
