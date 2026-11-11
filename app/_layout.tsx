@@ -1,29 +1,54 @@
 import { Stack, router } from "expo-router";
-import { View, Text, ActivityIndicator } from "react-native";
-import { useSyncStore } from "@/store/syncStore";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { runBackgroundSync } from "@/db/sync";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import CalculatorFab from "@/components/CalculatorFab";
+import { syncFromSupabase } from "@/lib/library/repository";
+import { clearLocalLibrary } from "@/lib/library/localDb";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { colors } from "@/lib/ui/theme";
+import { useAppFonts } from "@/lib/ui/useAppFonts";
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// A failed sync is silent: the library keeps showing the local copy.
+const syncQuietly = () => {
+  syncFromSupabase().catch(() => {});
+};
 
 export default function RootLayout() {
-  const isSyncing = useSyncStore((state) => state.isSyncing);
-  const lastError = useSyncStore((state) => state.lastError);
+  const fontsReady = useAppFonts();
+  // Router calls before the Stack mounts (font gate) would throw; set once mounted.
+  const navReady = useRef(false);
 
   useEffect(() => {
-    // Sync on every app open if the user is already authenticated
+    if (fontsReady) {
+      navReady.current = true;
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsReady]);
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        runBackgroundSync();
-      }
+      if (session) syncQuietly();
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
-        router.replace('/login');
+        clearLocalLibrary().catch(() =>
+          clearLocalLibrary().catch((e) =>
+            console.warn('Failed to clear local library on sign-out', e),
+          ),
+        );
+        // Drop the previous user's screens so back-navigation cannot reach them.
+        if (navReady.current) {
+          if (router.canDismiss()) router.dismissAll();
+          router.replace('/login');
+        }
       } else if (event === 'SIGNED_IN') {
-        runBackgroundSync();
-        router.replace('/(tabs)/');
+        syncQuietly();
+        if (navReady.current) router.replace('/library');
       }
     });
 
@@ -32,23 +57,19 @@ export default function RootLayout() {
     };
   }, []);
 
+  if (!fontsReady) return null;
+
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0F172A' }}>
-      {isSyncing && (
-        <View style={{ position: 'absolute', top: 50, right: 20, zIndex: 100, flexDirection: 'row', alignItems: 'center' }}>
-           <ActivityIndicator color="#10B981" />
-           <Text style={{ color: '#10B981', marginLeft: 8, fontSize: 12, fontWeight: 'bold', letterSpacing: 1 }}>SYNCING</Text>
-        </View>
-      )}
-      {!isSyncing && lastError && (
-        <View style={{ position: 'absolute', top: 50, right: 20, zIndex: 100, backgroundColor: '#ef4444', padding: 8, borderRadius: 8 }}>
-           <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>SYNC ERROR: {lastError}</Text>
-        </View>
-      )}
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0F172A' } }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
+        <Stack.Screen name="library" />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="calculator" options={{ presentation: "modal", headerShown: false }} />
       </Stack>
+      <CalculatorFab />
+      <StatusBar style="light" />
     </GestureHandlerRootView>
   );
 }
