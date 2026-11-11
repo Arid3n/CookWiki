@@ -1,53 +1,29 @@
 # CookWiki
 
-CookWiki is a smart, interactive recipe discovery and meal-planning application built with React Native and Expo. It goes beyond a simple recipe book by integrating dynamic macro tracking, intelligent pantry management, and an AI Sous-Chef to help you cook smarter and hit your nutritional goals.
+CookWiki is a personal food library for Expo / React Native. Every food stores its values per 100 g, and each food can have variants (for example a different preparation).
 
-## ✨ Features
+- **Library:** browse, search (including natural-language search through Gemini), pin foods and filter by tags.
+- **Chat:** a Gemini chat that can save foods and variants straight into your library.
+- **Label scan:** photograph a nutrition label and Gemini extracts the values.
+- **Calculator:** a floating calculator, and portion math on each food (grams in, macros out).
+- **Offline read cache:** the library is cached in local SQLite. Reading works offline; writes need a connection and show an offline message otherwise.
 
-### 🍽️ Recipes Feed & Playlists
-The Recipes Feed is your discovery hub. 
-- **Advanced Filter Deck:** Constrain recipes by macronutrients or calories to fit your diet perfectly.
-- **"Pantry Only" Mode:** Toggle this on to see only the recipes you can cook right now with your current stock.
-- **Playlists:** Organize your favorite recipes by adding them to custom Playlists for quick access.
+Stack: Expo 54, expo-router, Supabase (auth and database), expo-sqlite, zustand, Jest.
 
-### 🍳 Smart Cooking Viewer
-CookWiki adapts to your kitchen needs dynamically.
-- **Dynamic Scaling:** Scale the servings up or down and watch the macros update automatically. Toggle macros between "Per Serving" and "Per 100g".
-- **Fullscreen Cooking Mode:** Ready to cook? Tap the expand icon next to the instructions for a distraction-free, landscape view that keeps you focused.
-- **Forking Recipes:** Want to tweak a recipe? Simply tap the "Fork" icon to duplicate and edit it to your liking!
+## Setup
 
-### 🛒 Pantry & Ingredient Substitutions
-Your digital Pantry mirrors your real-world kitchen inventory.
-- **Seamless Substitutions:** Missing an ingredient? Tap on any ingredient in a recipe to ask the AI Sous-Chef for a substitute. The recipe and macros will update instantly!
-- **Auto-Deduction:** When you finish cooking, tap "I Made This!"—the app will check your stock and automatically deduct the used ingredients from your Pantry.
+1. Install dependencies: `npm install`
+2. Supply the Supabase project values as environment variables, for example in a `.env` file (git-ignored): `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` (read in `lib/supabase.ts`).
+3. In the Supabase SQL editor, run `supabase/migrations/0001_library.sql`.
+4. Start the app: `npx expo start`
+5. Sign in (or sign up) on the login screen.
+6. Open Settings and paste your Gemini API key. It is stored on the device in SecureStore only.
 
-### 🤖 AI Sous-Chef Chat
-Your personal culinary assistant is always ready to help.
-- Tap the robot icon on the top right to summon your AI Assistant!
-- Ask for meal-prepping advice, or let it generate a complete recipe directly from your available pantry items. 
-- *(Note: Requires a valid OpenAI or Gemini API key in the chat settings).*
+The camera permission text comes from `app.json` (the `expo-image-picker` plugin). If the camera permission prompt does not appear in Expo Go, build a development client (`eas.json` has a `development` profile).
 
-### 📊 Profile & Nutrition Tracking
-Track your weekly nutritional intake seamlessly.
-- **Nutrition Diary:** Every time you log a cooked recipe, its macros are aggregated in your profile.
-- **Goal Tracking:** Monitor your protein, carbs, fats, and calories to help you stay on top of your diet goals.
+## Tests
 
-## 🛠️ Tech Stack
-- **Framework:** React Native / Expo
-- **Database:** Local SQLite (expo-sqlite) + Drizzle ORM
-- **Authentication & Cloud Sync:** Supabase
-- **Styling:** Custom theming and UI components
-
-## 🚀 Getting Started
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Start the Expo development server:
-   ```bash
-   npx expo start
-   ```
-
-3. Follow the Expo CLI instructions to open the app on your physical device via Expo Go or on a local iOS/Android simulator.
+```bash
+npm test
+npx tsc --noEmit
+```
