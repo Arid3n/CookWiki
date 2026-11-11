@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -27,13 +27,25 @@ export default function Library() {
   const [offline, setOffline] = useState(false);
   const [query, setQuery] = useState('');
 
+  const mounted = useRef(true);
+  const requestId = useRef(0);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // Only the latest read is applied; stale or post-unmount results are dropped.
   const load = useCallback(async () => {
+    const id = ++requestId.current;
     try {
-      setFoods(await listFoods());
+      const result = await listFoods();
+      if (mounted.current && id === requestId.current) setFoods(result);
     } catch (e) {
       console.warn('Failed to read local library', e);
     } finally {
-      setLoading(false);
+      if (mounted.current && id === requestId.current) setLoading(false);
     }
   }, []);
 
@@ -45,14 +57,15 @@ export default function Library() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    let failed = false;
     try {
       await syncFromSupabase();
-      setOffline(false);
     } catch {
-      setOffline(true);
+      failed = true;
     }
+    if (mounted.current) setOffline(failed);
     await load();
-    setRefreshing(false);
+    if (mounted.current) setRefreshing(false);
   }, [load]);
 
   // SEAM (Task 14): AI search interpretation hooks in here. Does nothing yet.

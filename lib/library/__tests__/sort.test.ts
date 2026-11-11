@@ -17,8 +17,21 @@ describe('sortFoods', () => {
   });
 
   it('is stable for equal keys', () => {
-    const out = sortFoods([food('a'), food('b'), food('c')]);
-    expect(out.map((f) => f.id)).toEqual(['a', 'b', 'c']);
+    const same = '2026-01-01T00:00:00Z';
+    const out = sortFoods([
+      food('c', { updatedAt: same }), food('a', { updatedAt: same }),
+      food('d', { updatedAt: same }), food('b', { updatedAt: same }),
+    ]);
+    expect(out.map((f) => f.id)).toEqual(['c', 'a', 'd', 'b']);
+  });
+
+  it('sorts invalid or missing updatedAt last without crashing', () => {
+    const out = sortFoods([
+      food('bad', { updatedAt: 'not-a-date' }),
+      food('ok', { updatedAt: '2026-01-01T00:00:00Z' }),
+      food('missing', { updatedAt: undefined as unknown as string }),
+    ]);
+    expect(out.map((f) => f.id)).toEqual(['ok', 'bad', 'missing']);
   });
 
   it('does not mutate input', () => {

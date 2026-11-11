@@ -1,23 +1,28 @@
 import { useEffect, useState } from 'react';
-import { Keyboard, Pressable, StyleSheet } from 'react-native';
+import { Keyboard, Platform, Pressable, StyleSheet } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { fabBottomOffset } from '@/lib/calculator/fabLayout';
 import { supabase } from '@/lib/supabase';
 
-// ChatBar is 64pt + bottom inset tall; FAB bottom edge sits 96 + inset up, i.e. 32pt clear above it.
 const HIDDEN_PATHS = ['/calculator', '/login'];
 
 export default function CalculatorFab() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const [signedIn, setSignedIn] = useState(false);
-  const [keyboardUp, setKeyboardUp] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // The ChatBar rides above the keyboard; hide the FAB so it never covers the send button.
+  // Keep the FAB above the keyboard (and the ChatBar that rides on it).
   useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardUp(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardUp(false));
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () =>
+      setKeyboardHeight(0),
+    );
     return () => {
       show.remove();
       hide.remove();
@@ -38,14 +43,14 @@ export default function CalculatorFab() {
     };
   }, []);
 
-  if (!signedIn || HIDDEN_PATHS.includes(pathname) || keyboardUp) return null;
+  if (!signedIn || HIDDEN_PATHS.includes(pathname)) return null;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Open calculator"
       onPress={() => router.push('/calculator')}
-      style={[styles.fab, { bottom: 96 + insets.bottom, right: 16 + insets.right }]}
+      style={[styles.fab, { bottom: fabBottomOffset(insets.bottom, keyboardHeight), right: 16 + insets.right }]}
     >
       <Ionicons name="calculator" size={24} color="#0F172A" />
     </Pressable>

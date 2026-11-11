@@ -48,7 +48,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
     backgroundColor: '#1E293B',
     borderRadius: 12,
-    paddingHorizontal: 14,
+    paddingLeft: 14,
+    paddingRight: 56, // keep clear of the floating calculator button
     paddingVertical: 12,
     marginBottom: 8,
   },
