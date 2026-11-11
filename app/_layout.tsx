@@ -24,6 +24,8 @@ export default function RootLayout() {
             console.warn('Failed to clear local library on sign-out', e),
           ),
         );
+        // Drop the previous user's screens so back-navigation cannot reach them.
+        if (router.canDismiss()) router.dismissAll();
         router.replace('/login');
       } else if (event === 'SIGNED_IN') {
         syncQuietly();

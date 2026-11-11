@@ -98,6 +98,14 @@ export function parseSaveFoodArgs(args: unknown): SaveFoodArgs {
     const v = checkNumber(m, k, false);
     if (v !== undefined) macros[k] = v;
   }
+  // A range is only kept when it is complete and brackets the point estimate.
+  if (
+    macros.kcalMin === undefined || macros.kcalMax === undefined ||
+    !(macros.kcalMin <= macros.kcal && macros.kcal <= macros.kcalMax)
+  ) {
+    delete macros.kcalMin;
+    delete macros.kcalMax;
+  }
   if (macros.kcal > 50) {
     const atwater = 4 * macros.protein + 4 * macros.carbs + 9 * macros.fat;
     if (Math.abs(macros.kcal - atwater) > 0.35 * Math.max(atwater, 1)) {
@@ -130,6 +138,7 @@ export function buildChatSystemPrompt(libraryNames: string[], focus?: Food): str
     'Call the save_food tool only when the user asks to save something. Never save on your own.',
     'Preferences such as "low in oil" apply only to that one dish: adapt the amounts for it and save it as a variantLabel (e.g. "Low oil") instead of changing the base dish.',
     'Reuse an existing name from the library list below when the food is the same one.',
+    'If the user asks about a food that is already in the library list below, say it is already saved instead of estimating it again.',
     'Reply in the language the user writes in.',
     `Existing library names: ${libraryNames.length ? libraryNames.join(', ') : '(none yet)'}.`,
   ];

@@ -41,3 +41,25 @@ export function findDuplicates(name: string, foods: Food[]): Food[] {
     (f) => similar(q, normalizeName(f.name)) || f.tags.some((t) => normalizeName(t) === q),
   );
 }
+
+function sameWord(a: string, b: string): boolean {
+  return a === b || a + 's' === b || b + 's' === a || a + 'es' === b || b + 'es' === a;
+}
+
+/**
+ * Saved foods whose name appears in the message as a whole word/phrase (accent/case-insensitive,
+ * simple s/es plural tolerant, no fuzzy matching). Names shorter than 3 characters never match.
+ */
+export function findSavedMentioned(message: string, foods: Food[]): Food[] {
+  const words = normalizeName(message).split(' ').filter(Boolean);
+  if (words.length === 0) return [];
+  return foods.filter((f) => {
+    const name = normalizeName(f.name);
+    if (name.length < 3) return false;
+    const target = name.split(' ');
+    for (let i = 0; i + target.length <= words.length; i++) {
+      if (target.every((t, j) => sameWord(words[i + j], t))) return true;
+    }
+    return false;
+  });
+}

@@ -292,7 +292,7 @@ export async function addVariant(foodId: string, v: NewVariant): Promise<Variant
 
 export async function updateVariant(
   id: string,
-  patch: Partial<Macros & { label: string }>,
+  patch: Partial<Macros & { label: string }> & { kcalMin?: number | null; kcalMax?: number | null },
 ): Promise<void> {
   const payload = variantPayload(patch as Record<string, unknown>);
   if (Object.keys(payload).length === 0) return;

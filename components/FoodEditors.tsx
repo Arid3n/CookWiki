@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Macros } from '@/lib/library/types';
-import { normalizeTags, parseMacroValue } from '@/lib/library/validate';
+import { normalizeTags, parseMacroValue, withRangeReset } from '@/lib/library/validate';
 
 interface Common { busy: boolean; onCancel: () => void }
 
@@ -87,7 +87,7 @@ const FIELDS: { key: keyof Macros; label: string; required: boolean }[] = [
   { key: 'sodiumMg', label: 'Sodium (mg)', required: false },
 ];
 
-export function MacroEditor({ initial, busy, onCancel, onSave }: Common & { initial: Macros; onSave: (patch: Partial<Macros>) => void }) {
+export function MacroEditor({ initial, busy, onCancel, onSave }: Common & { initial: Macros; onSave: (patch: Partial<Macros> & { kcalMin?: null; kcalMax?: null }) => void }) {
   const [vals, setVals] = useState<Record<string, string>>(() =>
     Object.fromEntries(FIELDS.map((f) => [f.key, initial[f.key] === undefined ? '' : String(initial[f.key])])),
   );
@@ -102,7 +102,7 @@ export function MacroEditor({ initial, busy, onCancel, onSave }: Common & { init
       patch[f.key] = n;
     }
     setError(null);
-    onSave(patch);
+    onSave(withRangeReset(patch, initial.kcal));
   };
   return (
     <View style={s.box}>

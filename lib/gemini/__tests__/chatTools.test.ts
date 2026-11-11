@@ -37,7 +37,33 @@ describe('parseSaveFoodArgs', () => {
   });
 });
 
+describe('parseSaveFoodArgs kcal range', () => {
+  const range = (extra: Record<string, unknown>) => parseSaveFoodArgs(withMacros({ kcal: 96, protein: 4, carbs: 4, fat: 7, ...extra })).macros;
+  it('keeps a complete range that brackets kcal', () => {
+    const m = range({ kcalMin: 80, kcalMax: 110 });
+    expect([m.kcalMin, m.kcalMax]).toEqual([80, 110]);
+  });
+  it('keeps a range touching kcal', () => {
+    const m = range({ kcalMin: 96, kcalMax: 96 });
+    expect([m.kcalMin, m.kcalMax]).toEqual([96, 96]);
+  });
+  it('drops a half range', () => {
+    expect(range({ kcalMin: 80 })).not.toHaveProperty('kcalMin');
+    expect(range({ kcalMax: 110 })).not.toHaveProperty('kcalMax');
+  });
+  it('drops an inverted or non-bracketing range without throwing', () => {
+    for (const r of [{ kcalMin: 110, kcalMax: 80 }, { kcalMin: 100, kcalMax: 120 }, { kcalMin: 60, kcalMax: 90 }]) {
+      const m = range(r);
+      expect(m).not.toHaveProperty('kcalMin');
+      expect(m).not.toHaveProperty('kcalMax');
+    }
+  });
+});
+
 describe('buildChatSystemPrompt', () => {
+  it('tells the model to say a library food is already saved', () => {
+    expect(buildChatSystemPrompt(['Rice'])).toMatch(/already saved instead of estimating/);
+  });
   it('mentions per 100 g, save_food and library names', () => {
     const p = buildChatSystemPrompt(['Tzatziki', 'Rice']);
     expect(p).toMatch(/100 g/);

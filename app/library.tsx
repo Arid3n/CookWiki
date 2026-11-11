@@ -59,6 +59,15 @@ export default function Library() {
     }, [load]),
   );
 
+  // A new device starts empty: reload once the background sync (joined via inflight) finishes.
+  useEffect(() => {
+    syncFromSupabase()
+      .then(() => {
+        if (mounted.current) return load();
+      })
+      .catch(() => {});
+  }, [load]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     let failed = false;

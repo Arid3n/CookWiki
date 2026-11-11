@@ -19,3 +19,12 @@ export function normalizeTags(tags: string[]): string[] {
   }
   return out;
 }
+
+/** When a macro edit changes kcal, the saved kcal range no longer applies: clear it. */
+export function withRangeReset<T extends { kcal?: number }>(
+  patch: T,
+  initialKcal: number,
+): T & { kcalMin?: null; kcalMax?: null } {
+  if (patch.kcal === undefined || patch.kcal === initialKcal) return patch;
+  return { ...patch, kcalMin: null, kcalMax: null };
+}

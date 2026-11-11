@@ -12,6 +12,7 @@ import {
   InvalidSaveError, SAVE_FOOD_TOOL, SaveFoodArgs, buildChatSystemPrompt, parseSaveFoodArgs,
 } from '@/lib/gemini/chatTools';
 import { OfflineError } from '@/lib/library/errors';
+import { findSavedMentioned } from '@/lib/library/duplicates';
 import { listFoods } from '@/lib/library/repository';
 import { saveFromChat } from '@/lib/library/saveFromChat';
 import type { Food } from '@/lib/library/types';
@@ -19,6 +20,7 @@ import type { Food } from '@/lib/library/types';
 type Action =
   | { kind: 'open'; foodId: string }
   | { kind: 'duplicate'; foodId: string; args: SaveFoodArgs }
+  | { kind: 'saved'; foodId: string; message: string }
   | { kind: 'settings' };
 
 interface Bubble {
@@ -102,13 +104,13 @@ export default function Chat() {
     };
   };
 
-  const send = useCallback(async (raw: string) => {
+  const send = useCallback(async (raw: string, skipCheck = false, echo = true) => {
     const content = raw.trim();
     if (!content || busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
-    setText('');
-    add({ role: 'user', text: content });
+    if (echo) setText('');
+    if (echo) add({ role: 'user', text: content });
     const userTurn: GeminiContent = { role: 'user', parts: [{ text: content }] };
     const controller = new AbortController();
     abort.current = controller;
@@ -117,6 +119,19 @@ export default function Chat() {
     try {
       const foods = await readFoods();
       const focus = foodId ? foods.find((f) => f.id === foodId) : undefined;
+      if (!focus && !skipCheck) {
+        // Local check before any Gemini call: a saved food is not estimated again.
+        const hit = findSavedMentioned(content, foods)[0];
+        if (hit) {
+          add({
+            role: 'notice',
+            text: `Already in your library: ${hit.name}`,
+            action: { kind: 'saved', foodId: hit.id, message: content },
+          });
+          turns.length = 0;
+          return;
+        }
+      }
       const system = buildChatSystemPrompt(foods.map((f) => f.name), focus);
       const ask = () =>
         callGemini({ system, contents: [...history.current, ...turns], tools: TOOLS, signal: controller.signal });
@@ -190,6 +205,12 @@ export default function Chat() {
 
   const [done, setDone] = useState<Record<number, boolean>>({});
 
+  const askAnyway = useCallback((bubbleId: number, message: string) => {
+    if (busyRef.current) return;
+    setDone((d) => ({ ...d, [bubbleId]: true }));
+    send(message, true, false);
+  }, [send]);
+
   const saveFromDuplicate = useCallback(async (bubbleId: number, existingId: string, args: SaveFoodArgs, asNew: boolean) => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -215,6 +236,16 @@ export default function Chat() {
       <Text style={styles.bubbleText}>{item.text}</Text>
       {item.action?.kind === 'open' && (
         <Btn label="Open" onPress={() => router.push(`/food/${(item.action as { foodId: string }).foodId}`)} />
+      )}
+      {item.action?.kind === 'saved' && (
+        <View style={styles.row}>
+          <Btn label="Open" onPress={() => router.push(`/food/${(item.action as { foodId: string }).foodId}`)} />
+          <Btn
+            label="Ask anyway"
+            disabled={busy || !!done[item.id]}
+            onPress={() => askAnyway(item.id, (item.action as { message: string }).message)}
+          />
+        </View>
       )}
       {item.action?.kind === 'settings' && <Btn label="Open Settings" onPress={() => router.push('/settings')} />}
       {item.action?.kind === 'duplicate' && (

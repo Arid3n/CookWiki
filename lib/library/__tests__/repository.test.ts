@@ -376,6 +376,13 @@ describe('variants and defaults', () => {
     expect(mockCalls).toHaveLength(0);
   });
 
+  it('updateVariant passes null range through to the payload', async () => {
+    const { v1 } = await seed();
+    mockCalls.length = 0;
+    await updateVariant(v1.id, { kcal: 220, kcalMin: null, kcalMax: null });
+    expect(mockCalls[0]).toMatchObject({ payload: { kcal: 220, kcal_min: null, kcal_max: null } });
+  });
+
   it('updateVariant maps camelCase to snake_case and sends only given keys', async () => {
     const { v1 } = await seed();
     mockCalls.length = 0;
