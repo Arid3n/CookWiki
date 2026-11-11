@@ -3,7 +3,6 @@ import {
   ActivityIndicator, FlatList, KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   GeminiBlockedError, GeminiContent, GeminiHttpError, MissingKeyError, callGemini,
@@ -16,6 +15,10 @@ import { findSavedMentioned } from '@/lib/library/duplicates';
 import { listFoods } from '@/lib/library/repository';
 import { saveFromChat } from '@/lib/library/saveFromChat';
 import type { Food } from '@/lib/library/types';
+import Hero from '@/components/ui/Hero';
+import Icon from '@/components/ui/Icon';
+import RingButton from '@/components/ui/RingButton';
+import { colors, fonts, sizes, space } from '@/lib/ui/theme';
 
 type Action =
   | { kind: 'open'; foodId: string }
@@ -28,6 +31,7 @@ interface Bubble {
   role: 'user' | 'model' | 'notice';
   text: string;
   action?: Action;
+  error?: boolean;
 }
 
 class LibraryReadError extends Error {
@@ -39,18 +43,18 @@ class LibraryReadError extends Error {
 
 const TOOLS = [{ functionDeclarations: [SAVE_FOOD_TOOL] }];
 
-function errorBubble(e: unknown): { text: string; action?: Action } {
+function errorBubble(e: unknown): { text: string; action?: Action; error: true } {
   if (e instanceof MissingKeyError) {
-    return { text: 'No Gemini API key is set. Add your key in Settings to use the chat.', action: { kind: 'settings' } };
+    return { text: 'No Gemini API key is set. Add your key in Settings to use the chat.', action: { kind: 'settings' }, error: true };
   }
-  if (e instanceof OfflineError) return { text: 'You need internet to save to your library. Nothing was saved.' };
-  if (e instanceof InvalidSaveError || e instanceof LibraryReadError) return { text: e.message };
-  if (e instanceof GeminiHttpError || e instanceof GeminiBlockedError) return { text: e.message };
+  if (e instanceof OfflineError) return { text: 'You need internet to save to your library. Nothing was saved.', error: true };
+  if (e instanceof InvalidSaveError || e instanceof LibraryReadError) return { text: e.message, error: true };
+  if (e instanceof GeminiHttpError || e instanceof GeminiBlockedError) return { text: e.message, error: true };
   if (e instanceof Error && (e.name === 'AbortError' || /network request failed|failed to fetch/i.test(e.message))) {
-    return { text: 'Could not reach Gemini. Check your internet connection and try again.' };
+    return { text: 'Could not reach Gemini. Check your internet connection and try again.', error: true };
   }
   console.warn('Chat failed', e);
-  return { text: 'Something went wrong. Nothing was saved. Please try again.' };
+  return { text: 'Something went wrong. Nothing was saved. Please try again.', error: true };
 }
 
 export default function Chat() {
@@ -145,7 +149,7 @@ export default function Chat() {
         if (fc.name !== 'save_food') {
           // Keep call/response pairing valid without confirming anything.
           response = { error: `Unknown function ${fc.name}`, saved: false };
-          add({ role: 'notice', text: 'The assistant asked for something this app cannot do. Nothing was saved.' });
+          add({ role: 'notice', text: 'The assistant asked for something this app cannot do. Nothing was saved.', error: true });
         } else {
           try {
             const args = parseSaveFoodArgs(fc.args);
@@ -178,14 +182,14 @@ export default function Chat() {
               add({ role: 'model', text: res.text });
             }
           } catch {
-            add({ role: 'notice', text: 'Saved, but the assistant reply failed.' });
+            add({ role: 'notice', text: 'Saved, but the assistant reply failed.', error: true });
           }
         }
       } else if (res.text) {
         turns.push({ role: 'model', parts: [{ text: res.text }] });
         add({ role: 'model', text: res.text });
       } else {
-        add({ role: 'notice', text: 'The assistant sent an empty reply. Please try again.' });
+        add({ role: 'notice', text: 'The assistant sent an empty reply. Please try again.', error: true });
       }
     } catch (e) {
       if (mounted.current) add({ role: 'notice', ...errorBubble(e) });
@@ -231,58 +235,71 @@ export default function Chat() {
     }
   }, [add, readFoods]);
 
-  const renderItem = ({ item }: { item: Bubble }) => (
-    <View style={[styles.bubble, item.role === 'user' ? styles.user : item.role === 'model' ? styles.model : styles.notice]}>
-      <Text style={styles.bubbleText}>{item.text}</Text>
-      {item.action?.kind === 'open' && (
-        <Btn label="Open" onPress={() => router.push(`/food/${(item.action as { foodId: string }).foodId}`)} />
-      )}
-      {item.action?.kind === 'saved' && (
-        <View style={styles.row}>
-          <Btn label="Open" onPress={() => router.push(`/food/${(item.action as { foodId: string }).foodId}`)} />
-          <Btn
-            label="Ask anyway"
-            disabled={busy || !!done[item.id]}
-            onPress={() => askAnyway(item.id, (item.action as { message: string }).message)}
-          />
+  const renderItem = ({ item }: { item: Bubble }) => {
+    if (item.role === 'notice' && item.action?.kind === 'open') {
+      const id = item.action.foodId;
+      return (
+        <View style={styles.saved}>
+          <View style={styles.check}>
+            <Icon name="check" size={16} color={colors.ink} />
+          </View>
+          <Text style={styles.savedName} numberOfLines={2}>{item.text}</Text>
+          <Btn label="Open" onPress={() => router.push(`/food/${id}`)} />
         </View>
-      )}
-      {item.action?.kind === 'settings' && <Btn label="Open Settings" onPress={() => router.push('/settings')} />}
-      {item.action?.kind === 'duplicate' && (
-        <View style={styles.row}>
-          <Btn label="Open" onPress={() => router.push(`/food/${(item.action as { foodId: string }).foodId}`)} />
-          <Btn
-            label={done[item.id] ? 'Saved' : 'Save as variant'}
-            disabled={busy || !!done[item.id]}
-            onPress={() => {
-              const a = item.action as { foodId: string; args: SaveFoodArgs };
-              saveFromDuplicate(item.id, a.foodId, a.args, false);
-            }}
-          />
-          <Btn
-            label="Save as new food"
-            disabled={busy || !!done[item.id]}
-            onPress={() => {
-              const a = item.action as { foodId: string; args: SaveFoodArgs };
-              saveFromDuplicate(item.id, a.foodId, a.args, true);
-            }}
-          />
-        </View>
-      )}
-    </View>
-  );
+      );
+    }
+    return (
+      <View style={[styles.bubble, item.role === 'user' ? styles.user : item.role === 'model' ? styles.model : styles.notice]}>
+        <Text style={[styles.bubbleText, item.role === 'user' && styles.userText, item.error && styles.errorText]}>{item.text}</Text>
+        {item.action?.kind === 'saved' && (
+          <View style={styles.row}>
+            <Btn label="Open" onPress={() => router.push(`/food/${(item.action as { foodId: string }).foodId}`)} />
+            <Btn
+              label="Ask anyway"
+              disabled={busy || !!done[item.id]}
+              onPress={() => askAnyway(item.id, (item.action as { message: string }).message)}
+            />
+          </View>
+        )}
+        {item.action?.kind === 'settings' && <Btn label="Open Settings" onPress={() => router.push('/settings')} />}
+        {item.action?.kind === 'duplicate' && (
+          <View style={styles.row}>
+            <Btn label="Open" onPress={() => router.push(`/food/${(item.action as { foodId: string }).foodId}`)} />
+            <Btn
+              label={done[item.id] ? 'Saved' : 'Save as variant'}
+              disabled={busy || !!done[item.id]}
+              onPress={() => {
+                const a = item.action as { foodId: string; args: SaveFoodArgs };
+                saveFromDuplicate(item.id, a.foodId, a.args, false);
+              }}
+            />
+            <Btn
+              label="Save as new food"
+              disabled={busy || !!done[item.id]}
+              onPress={() => {
+                const a = item.action as { foodId: string; args: SaveFoodArgs };
+                saveFromDuplicate(item.id, a.foodId, a.args, true);
+              }}
+            />
+          </View>
+        )}
+      </View>
+    );
+  };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button" accessibilityLabel="Back" style={styles.back}
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/library'))}
-        >
-          <Ionicons name="chevron-back" size={24} color="#F1F5F9" />
-        </Pressable>
-        <Text style={styles.title}>Chat</Text>
-      </View>
+    <View style={styles.screen}>
+      <Hero height={HERO_HEIGHT} seed={5}>
+        <View style={styles.heroRow}>
+          <Pressable
+            accessibilityRole="button" accessibilityLabel="Back" hitSlop={6} style={styles.round}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/library'))}
+          >
+            <Icon name="back" size={18} color={colors.text} />
+          </Pressable>
+          <Text style={styles.title}>chat</Text>
+        </View>
+      </Hero>
       <FlatList
         ref={listRef}
         data={bubbles}
@@ -296,26 +313,26 @@ export default function Chat() {
             Ask about a food or dish (values are per 100 g). Say "save it" to add it to your library.
           </Text>
         }
-        ListFooterComponent={busy ? <ActivityIndicator color="#10B981" style={styles.spinner} /> : null}
+        ListFooterComponent={busy ? <ActivityIndicator color={colors.peach} style={styles.spinner} /> : null}
       />
       <KeyboardAvoidingView behavior="padding">
         <View style={[styles.bar, { paddingBottom: 8 + insets.bottom }]}>
-          <TextInput
-            accessibilityLabel="Message"
-            style={styles.input}
-            value={text}
-            onChangeText={setText}
-            onSubmitEditing={() => send(text)}
-            placeholder="Ask about a food..."
-            placeholderTextColor="#94A3B8"
-            returnKeyType="send"
-          />
-          <Pressable
-            accessibilityRole="button" accessibilityLabel="Send message" disabled={busy || !text.trim()}
-            onPress={() => send(text)} style={[styles.send, (busy || !text.trim()) && styles.disabled]}
-          >
-            <Ionicons name="send" size={20} color="#0F172A" />
-          </Pressable>
+          <View style={styles.dock}>
+            <TextInput
+              accessibilityLabel="Message"
+              style={styles.input}
+              value={text}
+              onChangeText={setText}
+              onSubmitEditing={() => send(text)}
+              placeholder="Ask about a food..."
+              placeholderTextColor={colors.sub}
+              returnKeyType="send"
+            />
+            <RingButton
+              kind="send" size={sizes.send} icon="send" accessibilityLabel="Send message"
+              disabled={busy || !text.trim()} onPress={() => send(text)}
+            />
+          </View>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -333,34 +350,45 @@ function Btn({ label, onPress, disabled }: { label: string; onPress: () => void;
   );
 }
 
+const HERO_HEIGHT = 84;
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0F172A' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, height: 56 },
-  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#F1F5F9', fontSize: 18, fontWeight: '600' },
-  // Bottom padding keeps the last bubble clear of the calculator FAB that floats above the input bar.
-  list: { padding: 12, gap: 8, paddingBottom: 72, flexGrow: 1 },
-  empty: { color: '#94A3B8', textAlign: 'center', marginTop: 48, paddingHorizontal: 24, fontSize: 15 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space.gutter, paddingTop: 12 },
+  round: {
+    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(32,18,10,0.28)',
+  },
+  title: { color: colors.text, fontFamily: fonts.display, fontSize: 30, lineHeight: 34, textTransform: 'uppercase' },
+  // Bottom padding keeps the last bubble clear of the dock and the calculator FAB above it.
+  list: { padding: space.gutter, gap: 8, paddingBottom: 72, flexGrow: 1 },
+  empty: { color: colors.sub, fontFamily: fonts.body, textAlign: 'center', marginTop: 48, paddingHorizontal: 24, fontSize: 15 },
   spinner: { marginVertical: 8 },
-  bubble: { maxWidth: '85%', borderRadius: 16, padding: 12, gap: 8 },
-  user: { alignSelf: 'flex-end', backgroundColor: '#065F46' },
-  model: { alignSelf: 'flex-start', backgroundColor: '#1E293B' },
-  notice: { alignSelf: 'flex-start', backgroundColor: '#334155' },
-  bubbleText: { color: '#F1F5F9', fontSize: 16 },
+  bubble: { maxWidth: '85%', borderRadius: 18, padding: 12, gap: 8 },
+  user: { alignSelf: 'flex-end', backgroundColor: colors.peach },
+  model: { alignSelf: 'flex-start', backgroundColor: colors.surface },
+  notice: { alignSelf: 'flex-start', backgroundColor: colors.surface2 },
+  bubbleText: { color: colors.text, fontFamily: fonts.body, fontSize: 16 },
+  errorText: { color: colors.danger },
+  userText: { color: colors.ink },
+  saved: {
+    alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12,
+    borderRadius: 14, backgroundColor: colors.surface, borderLeftWidth: 3, borderLeftColor: colors.sage,
+  },
+  check: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center' },
+  savedName: { flex: 1, color: colors.text, fontFamily: fonts.name, fontSize: 15 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   btn: {
-    minHeight: 44, paddingHorizontal: 16, borderRadius: 22, backgroundColor: '#10B981',
+    minHeight: 44, paddingHorizontal: 16, borderRadius: 22, backgroundColor: colors.peach,
     alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start',
   },
-  btnText: { color: '#0F172A', fontSize: 15, fontWeight: '600' },
+  btnText: { color: colors.ink, fontFamily: fonts.bodyBold, fontSize: 15 },
   disabled: { opacity: 0.5 },
-  bar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, paddingHorizontal: 12,
-    backgroundColor: '#0F172A', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#1E293B',
+  bar: { paddingHorizontal: space.gutter, paddingTop: 8, backgroundColor: colors.bg },
+  dock: {
+    height: sizes.dock, borderRadius: sizes.dock / 2, backgroundColor: colors.surface2,
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 16, paddingRight: 5,
+    elevation: 8, shadowColor: colors.shadow, shadowOpacity: 0.5, shadowRadius: 11, shadowOffset: { width: 0, height: 8 },
   },
-  input: {
-    flex: 1, height: 48, borderRadius: 24, paddingHorizontal: 16, backgroundColor: '#1E293B',
-    color: '#F1F5F9', fontSize: 16,
-  },
-  send: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' },
+  input: { flex: 1, height: 44, color: colors.text, fontFamily: fonts.body, fontSize: 16 },
 });
