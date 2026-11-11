@@ -225,7 +225,7 @@ function Btn({ label, onPress, disabled }: { label: string; onPress: () => void;
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.ringFill },
+  screen: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: 12 },
   spacer: { width: 36, height: 36 },
   back: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.scrim },
