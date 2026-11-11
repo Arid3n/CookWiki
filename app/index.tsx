@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { Text, View, TouchableOpacity } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
-import { runBackgroundSync } from "@/db/sync";
 
 export default function Index() {
   useEffect(() => {
@@ -10,8 +9,7 @@ export default function Index() {
       if (!session) {
         router.replace('/login');
       } else {
-        runBackgroundSync();
-        router.replace('/(tabs)/');
+        router.replace('/library');
       }
     });
   }, []);
