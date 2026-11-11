@@ -21,10 +21,34 @@
 --   select indexname from pg_indexes
 --   where schemaname = 'public' and tablename in ('foods', 'food_variants');
 --
--- ISOLATION TEST: do it in the app, not the SQL editor (the editor runs as a
--- superuser and bypasses RLS). Sign in as user A, insert a food, sign out, sign
--- in as user B, run supabase.from('foods').select('*'): expect [] and no error.
--- With a fresh project and one signed-in user, the same select returns [] too.
+--   -- 4. Function present, SECURITY INVOKER (prosecdef = false), search_path set
+--   select proname, prosecdef, proconfig from pg_proc
+--   where pronamespace = 'public'::regnamespace
+--     and proname in ('set_updated_at', 'set_default_variant');
+--
+-- ISOLATION TEST (SQL editor). The editor runs as a superuser, so switch role
+-- inside a transaction. Replace <uuid-A> and <uuid-B> with two real ids from
+-- `select id from auth.users limit 2;` (user_id has an FK to auth.users).
+-- Everything is rolled back; the last statement is expected to fail.
+--
+--   begin;
+--   set local role authenticated;
+--   select set_config('request.jwt.claims', '{"sub":"<uuid-A>","role":"authenticated"}', true);
+--   insert into public.foods (kind, name) values ('single', 'iso-test') returning id;  -- note the id
+--   select count(*) from public.foods;                -- A sees its own row: 1 or more
+--   select set_config('request.jwt.claims', '{"sub":"<uuid-B>","role":"authenticated"}', true);
+--   select count(*) from public.foods;                -- B sees none of A's rows: 0
+--   insert into public.food_variants (food_id, kcal, protein, carbs, fat)
+--     values ('<food-id-from-A>', 1, 1, 1, 1);        -- expected ERROR: row-level security violation
+--   rollback;
+--
+-- Also test in the app: sign in as A, insert a food, sign out, sign in as B,
+-- supabase.from('foods').select('*') returns [] and no error.
+--
+-- APP NOTE: the app repository must promote a default variant with
+-- supabase.rpc('set_default_variant', { p_food_id, p_variant_id }), also when
+-- promoting a new default after deleting the current default variant. Never set
+-- is_default with two separate client updates (unique index would be violated).
 
 -- Tables ---------------------------------------------------------------------
 
@@ -106,4 +130,42 @@ drop policy if exists food_variants_owner_all on public.food_variants;
 create policy food_variants_owner_all on public.food_variants
   for all to authenticated
   using (user_id = auth.uid())
-  with check (user_id = auth.uid());
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.foods f
+      where f.id = food_id and f.user_id = auth.uid()
+    )
+  );
+
+-- Default variant promotion ------------------------------------------------------
+-- SECURITY INVOKER: RLS applies to the caller. Clears the old default first, then
+-- sets the new one, in a single call, so the one-default-per-food index is never
+-- violated. Raises (and rolls back the whole call) if the variant is not in the food.
+
+create or replace function public.set_default_variant(p_food_id uuid, p_variant_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_count integer;
+begin
+  update public.food_variants
+    set is_default = false
+    where food_id = p_food_id and is_default and id <> p_variant_id;
+
+  update public.food_variants
+    set is_default = true
+    where id = p_variant_id and food_id = p_food_id;
+  get diagnostics v_count = row_count;
+
+  if v_count = 0 then
+    raise exception 'variant % does not belong to food %', p_variant_id, p_food_id;
+  end if;
+end;
+$$;
+
+revoke execute on function public.set_default_variant(uuid, uuid) from public, anon;
+grant execute on function public.set_default_variant(uuid, uuid) to authenticated;
