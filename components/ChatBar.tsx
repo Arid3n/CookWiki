@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from '@/components/ui/Icon';
+import RingButton from '@/components/ui/RingButton';
 import { useKeyboardHeight } from '@/lib/ui/useKeyboardHeight';
+import { colors, fonts, sizes, space } from '@/lib/ui/theme';
 
-/** Layout: 8 + 48 (scan/input/send) + 8 = 64pt, plus the bottom safe-area inset. */
+/** Layout: 56 (dock) + 8 below = 64pt, plus the bottom safe-area inset. */
 export const CHAT_BAR_HEIGHT = 64;
 
 export default function ChatBar() {
@@ -21,70 +23,66 @@ export default function ChatBar() {
 
   return (
     <View style={[styles.bar, { paddingBottom: 8 + (keyboardHeight > 0 ? keyboardHeight : insets.bottom) }]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Scan nutrition label"
-        onPress={() => router.push('/scan')}
-        style={styles.scan}
-      >
-        <Ionicons name="camera" size={22} color="#10B981" />
-      </Pressable>
-      <TextInput
-        accessibilityLabel="Ask the chat"
-        style={styles.input}
-        value={text}
-        onChangeText={setText}
-        onSubmitEditing={open}
-        placeholder="Ask about a food..."
-        placeholderTextColor="#94A3B8"
-        returnKeyType="send"
-      />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Send to chat"
-        onPress={open}
-        style={styles.send}
-      >
-          <Ionicons name="send" size={20} color="#0F172A" />
+      <View style={styles.dock}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Scan nutrition label"
+          onPress={() => router.push('/scan')}
+          hitSlop={4}
+          style={({ pressed }) => [styles.scan, pressed && styles.pressed]}
+        >
+          <Icon name="camera" size={18} color={colors.peach} />
         </Pressable>
+        <TextInput
+          accessibilityLabel="Ask the chat"
+          style={styles.input}
+          value={text}
+          onChangeText={setText}
+          onSubmitEditing={open}
+          placeholder="Ask about a food..."
+          placeholderTextColor={colors.sub}
+          returnKeyType="send"
+        />
+        <RingButton kind="send" size={sizes.send} icon="send" accessibilityLabel="Send to chat" onPress={open} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   bar: {
+    paddingHorizontal: space.gutter,
+    backgroundColor: colors.bg,
+  },
+  dock: {
+    height: sizes.dock,
+    borderRadius: sizes.dock / 2,
+    backgroundColor: colors.surface2,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingTop: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#0F172A',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#1E293B',
-  },
-  input: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    backgroundColor: '#1E293B',
-    color: '#F1F5F9',
-    fontSize: 16,
+    gap: 6,
+    paddingHorizontal: 5,
+    elevation: 8,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.5,
+    shadowRadius: 11,
+    shadowOffset: { width: 0, height: 8 },
   },
   scan: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#1E293B',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  send: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
+  pressed: { opacity: 0.7 },
+  input: {
+    flex: 1,
+    height: 44,
+    paddingHorizontal: 6,
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 16,
   },
 });

@@ -1,63 +1,44 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { defaultVariant } from '@/lib/library/search';
+import Icon from '@/components/ui/Icon';
+import { kcalLabel } from '@/lib/library/kcalLabel';
 import { Food } from '@/lib/library/types';
+import { colors, fonts, sizes, space } from '@/lib/ui/theme';
 
-const MAX_TAGS = 3;
-
-function macroLine(food: Food): string {
-  if (food.variants.length === 0) return 'No nutrition data';
-  const v = defaultVariant(food);
-  const kcal =
-    v.kcalMin !== undefined && v.kcalMax !== undefined
-      ? `${Math.round(v.kcalMin)}–${Math.round(v.kcalMax)} kcal`
-      : `${Math.round(v.kcal)} kcal`;
-  return `${kcal} · P ${Math.round(v.protein)} · C ${Math.round(v.carbs)} · F ${Math.round(v.fat)} per 100 g`;
-}
-
+/** Fixed-height list card: name (one line, ellipsized) and kcal per 100 g in the type colour. */
 export default function FoodRow({ food, onPress }: { food: Food; onPress: (id: string) => void }) {
-  const shown = food.tags.slice(0, MAX_TAGS);
-  const extra = food.tags.length - shown.length;
-  const line = macroLine(food);
+  const tint = food.kind === 'dish' ? colors.peach : colors.sage;
+  const kcal = kcalLabel(food);
+  const kcalSpoken = food.variants.length === 0 ? 'No nutrition data' : `${kcal} kcal per 100 g`;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${food.name}${food.pinned ? ', pinned' : ''}. ${line}`}
+      accessibilityLabel={`${food.name}${food.pinned ? ', pinned' : ''}. ${kcalSpoken}`}
       onPress={() => onPress(food.id)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, { borderLeftColor: tint }, pressed && styles.pressed]}
     >
-      <View style={styles.titleRow}>
+      <View style={styles.nameWrap}>
+        {food.pinned && <Icon name="pin" size={14} color={colors.peach} />}
         <Text style={styles.name} numberOfLines={1}>{food.name}</Text>
-        {food.pinned && <Ionicons name="pin" size={16} color="#10B981" accessibilityLabel="Pinned" />}
       </View>
-      <Text style={styles.macros}>{line}</Text>
-      {shown.length > 0 && (
-        <View style={styles.tags}>
-          {shown.map((t) => (
-            <View key={t} style={styles.chip}><Text style={styles.chipText}>{t}</Text></View>
-          ))}
-          {extra > 0 && <View style={styles.chip}><Text style={styles.chipText}>+{extra}</Text></View>}
-        </View>
-      )}
+      <Text style={[styles.kcal, { color: tint }]} numberOfLines={1}>{kcal}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 44,
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    paddingLeft: 14,
-    paddingRight: 56, // keep clear of the floating calculator button
-    paddingVertical: 12,
+    height: sizes.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderLeftWidth: 3,
+    paddingHorizontal: space.gutter,
     marginBottom: 8,
   },
   pressed: { opacity: 0.8 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  name: { flex: 1, color: '#F1F5F9', fontSize: 16, fontWeight: '600' },
-  macros: { color: '#94A3B8', fontSize: 13, marginTop: 4 },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
-  chip: { backgroundColor: '#0F172A', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  chipText: { color: '#94A3B8', fontSize: 12 },
+  nameWrap: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  name: { flex: 1, minWidth: 0, color: colors.text, fontFamily: fonts.name, fontSize: 16 },
+  kcal: { flexShrink: 0, textAlign: 'right', fontFamily: fonts.heading, fontSize: 18 },
 });

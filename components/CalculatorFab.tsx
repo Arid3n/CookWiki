@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fabBottomOffset } from '@/lib/calculator/fabLayout';
 import { supabase } from '@/lib/supabase';
 import { useKeyboardHeight } from '@/lib/ui/useKeyboardHeight';
+import { colors, sizes, space } from '@/lib/ui/theme';
+import RingButton from '@/components/ui/RingButton';
 
 const HIDDEN_PATHS = ['/calculator', '/login', '/settings', '/scan'];
 
@@ -32,30 +33,31 @@ export default function CalculatorFab() {
   if (!signedIn || HIDDEN_PATHS.includes(pathname)) return null;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Open calculator"
-      onPress={() => router.push('/calculator')}
-      style={[styles.fab, { bottom: fabBottomOffset(insets.bottom, keyboardHeight), right: 16 + insets.right }]}
+    <View
+      style={[styles.fab, { bottom: fabBottomOffset(insets.bottom, keyboardHeight), right: space.gutter + insets.right }]}
     >
-      <Ionicons name="calculator" size={24} color="#0F172A" />
-    </Pressable>
+      <RingButton
+        kind="calc"
+        size={sizes.fab}
+        icon="calc"
+        accessibilityLabel="Open calculator"
+        onPress={() => router.push('/calculator')}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: sizes.fab,
+    height: sizes.fab,
+    borderRadius: sizes.fab / 2,
+    backgroundColor: colors.ringFill,
     elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
 });

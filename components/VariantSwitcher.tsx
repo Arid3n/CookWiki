@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Variant } from '@/lib/library/types';
+import { colors, fonts } from '@/lib/ui/theme';
 
 interface Props {
   variants: Variant[];
@@ -25,7 +25,7 @@ export default function VariantSwitcher({ variants, selectedId, busy, onSelect, 
 
   return (
     <View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.seg} contentContainerStyle={styles.row}>
         {ordered.map((v) => {
           const on = v.id === selectedId;
           return (
@@ -37,7 +37,7 @@ export default function VariantSwitcher({ variants, selectedId, busy, onSelect, 
               onPress={() => onSelect(v.id)}
               style={[styles.chip, on && styles.chipOn]}
             >
-              {v.isDefault && <Ionicons name="star" size={14} color={on ? '#0F172A' : '#10B981'} />}
+              {v.isDefault && <View style={[styles.defaultDot, on && styles.defaultDotOn]} />}
               <Text style={[styles.chipText, on && styles.chipTextOn]}>{v.label}</Text>
             </Pressable>
           );
@@ -59,16 +59,20 @@ export default function VariantSwitcher({ variants, selectedId, busy, onSelect, 
 }
 
 const styles = StyleSheet.create({
-  single: { color: '#94A3B8', fontSize: 14 },
-  row: { gap: 8, paddingVertical: 2 },
+  single: { color: colors.sub, fontFamily: fonts.body, fontSize: 14 },
+  seg: { flexGrow: 0, backgroundColor: colors.surface, borderRadius: 16 },
+  row: { flexGrow: 1, gap: 4, padding: 4 },
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14,
-    borderRadius: 22, backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155',
+    flexGrow: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    minHeight: 44, paddingHorizontal: 14, borderRadius: 12,
   },
-  chipOn: { backgroundColor: '#10B981', borderColor: '#10B981' },
-  chipText: { color: '#F1F5F9', fontSize: 14 },
-  chipTextOn: { color: '#0F172A', fontWeight: '600' },
+  chipOn: { backgroundColor: colors.peach },
+  chipText: { color: colors.sub, fontFamily: fonts.name, fontSize: 14 },
+  chipTextOn: { color: colors.ink, fontFamily: fonts.bodyBold },
+  // Default variant marker (replaces the old star icon).
+  defaultDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.gold },
+  defaultDotOn: { backgroundColor: colors.ink },
   makeDefault: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  makeDefaultText: { color: '#10B981', fontSize: 14, fontWeight: '600' },
+  makeDefaultText: { color: colors.peach, fontFamily: fonts.bodyBold, fontSize: 14 },
   disabled: { opacity: 0.5 },
 });
