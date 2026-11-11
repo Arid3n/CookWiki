@@ -2,6 +2,7 @@ import { Stack, router } from "expo-router";
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import CalculatorFab from "@/components/CalculatorFab";
 
 export default function RootLayout() {
   useEffect(() => {
@@ -24,7 +25,9 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
         <Stack.Screen name="library" />
+        <Stack.Screen name="calculator" options={{ presentation: "modal", headerShown: false }} />
       </Stack>
+      <CalculatorFab />
     </GestureHandlerRootView>
   );
 }
