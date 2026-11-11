@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CookWiki Design Directions</title>
+    <style>
+        :root {
+            --bg-dark: #0F172A;
+            --accent-green: #10B981;
+            --font-main: 'Inter', system-ui, sans-serif;
+            --font-mono: 'SF Mono', 'Roboto Mono', monospace;
+        }
+        body {
+            background-color: #1a1a1a;
+            color: white;
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { margin-bottom: 40px; }
+        .container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .phone {
+            width: 320px;
+            height: 650px;
+            background-color: var(--bg-dark);
+            border-radius: 40px;
+            border: 8px solid #333;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .header {
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        /* Direction 1: The Algorithm */
+        .dir1 .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            font-family: var(--font-mono);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .dir1 .slider-area {
+            position: absolute;
+            bottom: 40px;
+            left: 20px;
+            right: 20px;
+        }
+        .slider-track { height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; position: relative; }
+        .slider-thumb { width: 24px; height: 24px; background: var(--accent-green); border-radius: 50%; position: absolute; top: -8px; left: 60%; }
+
+        /* Direction 2: The Immersive Media */
+        .dir2 {
+            background: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80') center/cover;
+        }
+        .dir2 .glass-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 35%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* Direction 3: The Split Deck */
+        .dir3 .image-half {
+            height: 45%;
+            background: url('https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80') center/cover;
+        }
+        .dir3 .deck-half {
+            height: 55%;
+            background: var(--bg-dark);
+            padding: 20px;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            margin-top: -20px;
+            position: relative;
+        }
+        
+        .label { text-align: center; margin-top: 15px; font-weight: bold; color: #888; }
+        .h-macro { font-family: var(--font-mono); color: var(--accent-green); font-size: 24px; text-align: center; margin: 10px 0;}
+    </style>
+</head>
+<body>
+
+    <h1>CookWiki Design Directions</h1>
+
+    <div class="container">
+        <!-- Direction 1 -->
+        <div>
+            <div class="phone dir1">
+                <div class="header">Direction 1: The Algorithm</div>
+                <div class="data-row"><span>Protein</span><span>45g</span></div>
+                <div class="data-row"><span>Carbs</span><span>20g</span></div>
+                <div class="data-row"><span>Fats</span><span>12g</span></div>
+                <div class="data-row" style="color:var(--accent-green)"><span>Remaining</span><span>0g</span></div>
+                <div class="slider-area">
+                    <p style="text-align:center;font-size:12px;color:#888;">Slide to Bridge</p>
+                    <div class="slider-track"><div class="slider-thumb"></div></div>
+                </div>
+            </div>
+            <div class="label">Dense Data / Terminal Aesthetic</div>
+        </div>
+
+        <!-- Direction 2 -->
+        <div>
+            <div class="phone dir2">
+                <div class="glass-panel">
+                    <h2 style="margin:0 0 10px 0;font-size:18px;">Chicken Bowl</h2>
+                    <div class="h-macro">0g Remaining</div>
+                    <div class="slider-track" style="margin-top:20px;"><div class="slider-thumb"></div></div>
+                </div>
+            </div>
+            <div class="label">Immersive Media (TikTok style)</div>
+        </div>
+
+        <!-- Direction 3 -->
+        <div>
+            <div class="phone dir3">
+                <div class="image-half"></div>
+                <div class="deck-half">
+                    <h2 style="margin:0 0 10px 0;font-size:20px;">Chicken Bowl</h2>
+                    <p style="color:#888;font-size:14px;margin-bottom:20px;">A high-protein post-workout meal.</p>
+                    <div class="h-macro">0g Remaining</div>
+                    <div class="slider-track" style="margin-top:30px;"><div class="slider-thumb"></div></div>
+                </div>
+            </div>
+            <div class="label">The Split Deck (Balanced)</div>
+        </div>
+    </div>
+
+</body>
+</html>

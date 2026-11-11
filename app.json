@@ -1,9 +1,10 @@
 {
   "expo": {
-    "name": "cw_temp",
-    "slug": "cw_temp",
-    "version": "1.0.0",
-    "orientation": "portrait",
+    "name": "CookWiki",
+    "slug": "cookwiki_app",
+    "scheme": "cookwiki",
+    "version": "4.0.0",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -13,7 +14,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.arid3n.cookwiki",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +26,22 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.arid3n.cookwiki_app",
+      "versionCode": 4
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0026645c-5630-4c8b-841d-d31816a8c6d5"
+      }
     }
   }
 }
