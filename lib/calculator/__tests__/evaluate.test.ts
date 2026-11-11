@@ -24,5 +24,7 @@ describe('evaluate', () => {
   it('deep nesting returns null', () => {
     expect(evaluate('('.repeat(2000))).toBeNull();
     expect(evaluate('('.repeat(500) + '1' + ')'.repeat(500))).toBeNull();
+    expect(evaluate('('.repeat(150) + '1' + ')'.repeat(150))).toBeNull();
+    expect(evaluate('('.repeat(100) + '1' + ')'.repeat(100))).toBe(1);
   });
 });

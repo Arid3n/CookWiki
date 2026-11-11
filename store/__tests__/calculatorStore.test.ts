@@ -1,4 +1,4 @@
-import { useCalculatorStore } from '../calculatorStore';
+import { useCalculatorStore, formatResult } from '../calculatorStore';
 
 const press = (...keys: string[]) => keys.forEach((k) => useCalculatorStore.getState().press(k));
 
@@ -66,5 +66,34 @@ describe('calculatorStore', () => {
   it('setExpression recomputes', () => {
     useCalculatorStore.getState().setExpression('2×3');
     expect(useCalculatorStore.getState().result).toBe(6);
+  });
+  it('formatResult never uses exponent notation', () => {
+    expect(formatResult(1e21)).toMatch(/^-?\d+$/);
+    expect(formatResult(-1e21)).toMatch(/^-?\d+$/);
+    expect(formatResult(1e300)).toMatch(/^\d+$/);
+    expect(formatResult(1e-7)).toBe('0.0000001');
+    expect(formatResult(1e-11)).toBe('0');
+    expect(formatResult(0.1 + 0.2)).toBe('0.3');
+  });
+  it('= on 1e21-scale result leaves parseable expression', () => {
+    press(...'9'.repeat(21).split(''), '+', '1');
+    press('=');
+    const s = useCalculatorStore.getState();
+    expect(s.expression).toMatch(/^\d+$/);
+    expect(s.result).not.toBeNull();
+  });
+  it('= near 1e300 never shows Infinity', () => {
+    press('1', ...'0'.repeat(300).split(''));
+    press('=');
+    let s = useCalculatorStore.getState();
+    expect(s.expression).toMatch(/^\d+$/);
+    expect(s.result).not.toBeNull();
+    useCalculatorStore.getState().clear();
+    press(...'9'.repeat(310).split(''));
+    expect(useCalculatorStore.getState().result).toBeNull();
+    press('=');
+    s = useCalculatorStore.getState();
+    expect(s.expression).toBe('9'.repeat(310));
+    expect(s.expression).not.toMatch(/Infinity|e/);
   });
 });

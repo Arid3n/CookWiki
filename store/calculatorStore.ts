@@ -14,6 +14,11 @@ interface CalculatorState {
 const OPERATORS = ['+', '-', '×', '÷'];
 
 export function formatResult(n: number): string {
+  if (!Number.isFinite(n)) return '';
+  if (Math.abs(n) >= 1e15) {
+    // Beyond double precision for decimals: expand integer digits, no exponent.
+    return BigInt(Math.round(n)).toString();
+  }
   const rounded = Math.round(n * 1e10) / 1e10;
   const str = rounded.toFixed(10).replace(/\.?0+$/, '');
   return str === '-0' || str === '' ? '0' : str;
@@ -45,8 +50,12 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => {
       }
       if (key === '=') {
         if (result !== null) {
-          justEvaluated = true;
-          set({ expression: formatResult(result), result });
+          const formatted = formatResult(result);
+          const parsed = /^-?\d+(\.\d+)?$/.test(formatted) ? evaluate(formatted) : null;
+          if (parsed !== null) {
+            justEvaluated = true;
+            set({ expression: formatted, result: parsed });
+          }
         }
         return;
       }
