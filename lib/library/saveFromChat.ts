@@ -1,5 +1,5 @@
 import type { SaveFoodArgs } from '../gemini/chatTools';
-import { findDuplicates } from './duplicates';
+import { findDuplicates, normalizeName } from './duplicates';
 import { addVariant, createFood } from './repository';
 import type { Food } from './types';
 import { normalizeTags } from './validate';
@@ -12,7 +12,7 @@ export type SaveOutcome =
 export async function saveFromChat(
   args: SaveFoodArgs,
   foods: Food[],
-  opts?: { focusFoodId?: string },
+  opts?: { focusFoodId?: string; forceNew?: boolean },
 ): Promise<SaveOutcome> {
   const variant = {
     ...args.macros,
@@ -20,14 +20,22 @@ export async function saveFromChat(
     ingredients: args.ingredients,
   };
   const focus = opts?.focusFoodId ? foods.find((f) => f.id === opts.focusFoodId) : undefined;
-  const target = focus ?? (args.variantLabel ? findDuplicates(args.name, foods)[0] : undefined);
-
-  if (target) {
-    await addVariant(target.id, { ...variant, label: args.variantLabel ?? 'Variation' });
-    return { type: 'variant-added', food: target };
+  if (focus) {
+    await addVariant(focus.id, { ...variant, label: args.variantLabel ?? 'Variation' });
+    return { type: 'variant-added', food: focus };
   }
-  const existing = findDuplicates(args.name, foods)[0];
-  if (existing) return { type: 'duplicate', existing };
+
+  if (!opts?.forceNew) {
+    // Fuzzy matches are only suggestions; a variant is added automatically on an exact normalized match.
+    const key = normalizeName(args.name);
+    const exact = foods.find((f) => normalizeName(f.name) === key);
+    if (exact && args.variantLabel) {
+      await addVariant(exact.id, { ...variant, label: args.variantLabel });
+      return { type: 'variant-added', food: exact };
+    }
+    const existing = exact ?? findDuplicates(args.name, foods)[0];
+    if (existing) return { type: 'duplicate', existing };
+  }
 
   const food = await createFood({
     kind: args.kind,

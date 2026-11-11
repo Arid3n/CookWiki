@@ -51,3 +51,22 @@ it('focusFoodId missing from list falls back to normal rules', async () => {
   const r = await saveFromChat(args, [], { focusFoodId: 'gone' });
   expect(r.type).toBe('created');
 });
+
+it('label with only a fuzzy match returns duplicate and writes nothing', async () => {
+  const existing = food('p', 'Pesto');
+  const r = await saveFromChat({ ...args, name: 'Pasta', variantLabel: 'Low oil' }, [existing]);
+  expect(r).toEqual({ type: 'duplicate', existing });
+  expect(mockAddVariant).not.toHaveBeenCalled();
+  expect(mockCreateFood).not.toHaveBeenCalled();
+});
+
+it('exact match ignoring case and accents with a label adds a variant', async () => {
+  const r = await saveFromChat({ ...args, name: 'TZATZIKÍ', variantLabel: 'Low oil' }, [food('t', 'tzatziki')]);
+  expect(r.type).toBe('variant-added');
+});
+
+it('forceNew creates a food despite a duplicate', async () => {
+  const r = await saveFromChat({ ...args, name: 'Pasta' }, [food('p', 'Pesto')], { forceNew: true });
+  expect(r.type).toBe('created');
+  expect(mockAddVariant).not.toHaveBeenCalled();
+});

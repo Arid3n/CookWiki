@@ -28,6 +28,13 @@ interface Bubble {
   action?: Action;
 }
 
+class LibraryReadError extends Error {
+  constructor() {
+    super('Could not read your library, so nothing was saved. Please try again.');
+    this.name = 'LibraryReadError';
+  }
+}
+
 const TOOLS = [{ functionDeclarations: [SAVE_FOOD_TOOL] }];
 
 function errorBubble(e: unknown): { text: string; action?: Action } {
@@ -35,7 +42,7 @@ function errorBubble(e: unknown): { text: string; action?: Action } {
     return { text: 'No Gemini API key is set. Add your key in Settings to use the chat.', action: { kind: 'settings' } };
   }
   if (e instanceof OfflineError) return { text: 'You need internet to save to your library. Nothing was saved.' };
-  if (e instanceof InvalidSaveError) return { text: e.message };
+  if (e instanceof InvalidSaveError || e instanceof LibraryReadError) return { text: e.message };
   if (e instanceof GeminiHttpError || e instanceof GeminiBlockedError) return { text: e.message };
   if (e instanceof Error && (e.name === 'AbortError' || /network request failed|failed to fetch/i.test(e.message))) {
     return { text: 'Could not reach Gemini. Check your internet connection and try again.' };
@@ -75,12 +82,13 @@ export default function Chat() {
     setBubbles((prev) => [...prev, { ...b, id: nextId.current++ }]);
   }, []);
 
+  // A failed read must not silently skip duplicate detection: callers show an error and save nothing.
   const readFoods = useCallback(async (): Promise<Food[]> => {
     try {
       return await listFoods();
     } catch (e) {
       console.warn('Failed to read local library', e);
-      return [];
+      throw new LibraryReadError();
     }
   }, []);
 
@@ -114,41 +122,55 @@ export default function Chat() {
         callGemini({ system, contents: [...history.current, ...turns], tools: TOOLS, signal: controller.signal });
 
       let res = await ask();
-      if (res.functionCall?.name === 'save_food') {
+      if (res.functionCall) {
         const fc = res.functionCall;
         turns.push({ role: 'model', parts: [{ functionCall: fc }] });
         let response: Record<string, unknown>;
         let confirm = false;
-        try {
-          const args = parseSaveFoodArgs(fc.args);
-          const outcome = await saveFromChat(args, foods, { focusFoodId: focus?.id });
-          if (outcome.type === 'duplicate') {
-            add({
-              role: 'notice',
-              text: 'Already in your library',
-              action: { kind: 'duplicate', foodId: outcome.existing.id, args },
-            });
-            response = { result: 'duplicate', existingName: outcome.existing.name, saved: false };
-          } else {
-            add(savedBubble(outcome, args));
-            response = { result: outcome.type, name: outcome.food.name, saved: true };
+        if (fc.name !== 'save_food') {
+          // Keep call/response pairing valid without confirming anything.
+          response = { error: `Unknown function ${fc.name}`, saved: false };
+          add({ role: 'notice', text: 'The assistant asked for something this app cannot do. Nothing was saved.' });
+        } else {
+          try {
+            const args = parseSaveFoodArgs(fc.args);
+            const outcome = await saveFromChat(args, foods, { focusFoodId: focus?.id });
+            if (outcome.type === 'duplicate') {
+              add({
+                role: 'notice',
+                text: 'Already in your library',
+                action: { kind: 'duplicate', foodId: outcome.existing.id, args },
+              });
+              response = { result: 'duplicate', existingName: outcome.existing.name, saved: false };
+            } else {
+              add(savedBubble(outcome, args));
+              response = { result: outcome.type, name: outcome.food.name, saved: true };
+            }
+            confirm = true;
+          } catch (e) {
+            const b = errorBubble(e);
+            add({ role: 'notice', ...b });
+            response = { error: b.text, saved: false };
           }
-          confirm = true;
-        } catch (e) {
-          const b = errorBubble(e);
-          add({ role: 'notice', ...b });
-          response = { error: b.text, saved: false };
         }
         turns.push({ role: 'user', parts: [{ functionResponse: { name: fc.name, response } }] });
         if (confirm) {
-          res = await ask();
-          if (res.text) turns.push({ role: 'model', parts: [{ text: res.text }] });
-          add({ role: 'model', text: res.text ?? 'Done.' });
+          // The write already happened; a failed confirmation must not claim otherwise.
+          try {
+            res = await ask();
+            if (res.text) {
+              turns.push({ role: 'model', parts: [{ text: res.text }] });
+              add({ role: 'model', text: res.text });
+            }
+          } catch {
+            add({ role: 'notice', text: 'Saved, but the assistant reply failed.' });
+          }
         }
+      } else if (res.text) {
+        turns.push({ role: 'model', parts: [{ text: res.text }] });
+        add({ role: 'model', text: res.text });
       } else {
-        const reply = res.text ?? '';
-        turns.push({ role: 'model', parts: [{ text: reply }] });
-        add({ role: 'model', text: reply });
+        add({ role: 'notice', text: 'The assistant sent an empty reply. Please try again.' });
       }
     } catch (e) {
       if (mounted.current) add({ role: 'notice', ...errorBubble(e) });
@@ -166,15 +188,20 @@ export default function Chat() {
     if (q && q.trim()) send(q);
   }, [q, send]);
 
-  const saveAsVariant = useCallback(async (existingId: string, args: SaveFoodArgs) => {
+  const [done, setDone] = useState<Record<number, boolean>>({});
+
+  const saveFromDuplicate = useCallback(async (bubbleId: number, existingId: string, args: SaveFoodArgs, asNew: boolean) => {
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
     try {
       const foods = await readFoods();
-      const withLabel = { ...args, variantLabel: args.variantLabel ?? 'Variation' };
-      const outcome = await saveFromChat(withLabel, foods, { focusFoodId: existingId });
-      if (outcome.type !== 'duplicate') add(savedBubble(outcome, withLabel));
+      const a = asNew ? args : { ...args, variantLabel: args.variantLabel ?? 'Variation' };
+      const outcome = await saveFromChat(a, foods, asNew ? { forceNew: true } : { focusFoodId: existingId });
+      if (outcome.type !== 'duplicate') {
+        add(savedBubble(outcome, a));
+        if (mounted.current) setDone((d) => ({ ...d, [bubbleId]: true }));
+      }
     } catch (e) {
       add({ role: 'notice', ...errorBubble(e) });
     } finally {
@@ -194,11 +221,19 @@ export default function Chat() {
         <View style={styles.row}>
           <Btn label="Open" onPress={() => router.push(`/food/${(item.action as { foodId: string }).foodId}`)} />
           <Btn
-            label="Save as variant"
-            disabled={busy}
+            label={done[item.id] ? 'Saved' : 'Save as variant'}
+            disabled={busy || !!done[item.id]}
             onPress={() => {
               const a = item.action as { foodId: string; args: SaveFoodArgs };
-              saveAsVariant(a.foodId, a.args);
+              saveFromDuplicate(item.id, a.foodId, a.args, false);
+            }}
+          />
+          <Btn
+            label="Save as new food"
+            disabled={busy || !!done[item.id]}
+            onPress={() => {
+              const a = item.action as { foodId: string; args: SaveFoodArgs };
+              saveFromDuplicate(item.id, a.foodId, a.args, true);
             }}
           />
         </View>
