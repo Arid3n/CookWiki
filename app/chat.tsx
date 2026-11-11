@@ -41,6 +41,8 @@ class LibraryReadError extends Error {
   }
 }
 
+const HERO_HEIGHT = 108;
+
 const TOOLS = [{ functionDeclarations: [SAVE_FOOD_TOOL] }];
 
 function errorBubble(e: unknown): { text: string; action?: Action; error: true } {
@@ -244,7 +246,12 @@ export default function Chat() {
             <Icon name="check" size={16} color={colors.ink} />
           </View>
           <Text style={styles.savedName} numberOfLines={2}>{item.text}</Text>
-          <Btn label="Open" onPress={() => router.push(`/food/${id}`)} />
+          <Pressable
+            accessibilityRole="button" accessibilityLabel="Open" hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            onPress={() => router.push(`/food/${id}`)} style={styles.open}
+          >
+            <Text style={styles.openText}>Open</Text>
+          </Pressable>
         </View>
       );
     }
@@ -289,7 +296,7 @@ export default function Chat() {
 
   return (
     <View style={styles.screen}>
-      <Hero height={HERO_HEIGHT} seed={5}>
+      <Hero height={HERO_HEIGHT} seed={4}>
         <View style={styles.heroRow}>
           <Pressable
             accessibilityRole="button" accessibilityLabel="Back" hitSlop={6} style={styles.round}
@@ -298,6 +305,7 @@ export default function Chat() {
             <Icon name="back" size={18} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>chat</Text>
+          <View style={styles.spacer} />
         </View>
       </Hero>
       <FlatList
@@ -350,33 +358,34 @@ function Btn({ label, onPress, disabled }: { label: string; onPress: () => void;
   );
 }
 
-const HERO_HEIGHT = 84;
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space.gutter, paddingTop: 12 },
+  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: 12 },
   round: {
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(32,18,10,0.28)',
+    backgroundColor: colors.scrim,
   },
-  title: { color: colors.text, fontFamily: fonts.display, fontSize: 30, lineHeight: 34, textTransform: 'uppercase' },
+  spacer: { width: 36, height: 36 },
+  title: { color: colors.text, fontFamily: fonts.display, fontSize: 44, lineHeight: 48, textTransform: 'uppercase' },
   // Bottom padding keeps the last bubble clear of the dock and the calculator FAB above it.
   list: { padding: space.gutter, gap: 8, paddingBottom: 72, flexGrow: 1 },
   empty: { color: colors.sub, fontFamily: fonts.body, textAlign: 'center', marginTop: 48, paddingHorizontal: 24, fontSize: 15 },
   spinner: { marginVertical: 8 },
   bubble: { maxWidth: '85%', borderRadius: 18, padding: 12, gap: 8 },
-  user: { alignSelf: 'flex-end', backgroundColor: colors.peach },
-  model: { alignSelf: 'flex-start', backgroundColor: colors.surface },
+  user: { alignSelf: 'flex-end', backgroundColor: colors.peach, borderBottomRightRadius: 4 },
+  model: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderBottomLeftRadius: 4 },
   notice: { alignSelf: 'flex-start', backgroundColor: colors.surface2 },
-  bubbleText: { color: colors.text, fontFamily: fonts.body, fontSize: 16 },
-  errorText: { color: colors.danger },
+  bubbleText: { color: colors.text, fontFamily: fonts.body, fontSize: 16, lineHeight: 22 },
+  errorText: { color: colors.dangerText },
   userText: { color: colors.ink },
   saved: {
-    alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12,
-    borderRadius: 14, backgroundColor: colors.surface, borderLeftWidth: 3, borderLeftColor: colors.sage,
+    alignSelf: 'flex-start', width: '92%', flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12,
+    borderRadius: 20, backgroundColor: colors.surface, borderLeftWidth: 3, borderLeftColor: colors.sage,
   },
-  check: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center' },
+  check: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center' },
   savedName: { flex: 1, color: colors.text, fontFamily: fonts.name, fontSize: 15 },
+  open: { paddingVertical: 7, paddingHorizontal: 13, borderRadius: 14, backgroundColor: colors.peach },
+  openText: { color: colors.ink, fontFamily: fonts.bodyBold, fontSize: 12 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   btn: {
     minHeight: 44, paddingHorizontal: 16, borderRadius: 22, backgroundColor: colors.peach,

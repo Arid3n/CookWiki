@@ -15,6 +15,8 @@ describe('theme tokens', () => {
     expect(colors.ringFill).toBe('#120B07');
     expect(colors.rust).toBe('#c16b27');
     expect(colors.danger).toBe('#B5524A');
+    expect(colors.dangerText).toBe('#E8837A');
+    expect(colors.scrim).toBe('rgba(32,18,10,0.28)');
   });
 
   it('has fonts, spacing and sizes', () => {

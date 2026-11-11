@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   count: { color: colors.peach, fontFamily: fonts.body, fontSize: 12, marginTop: 4 },
   settings: {
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(32,18,10,0.28)',
+    backgroundColor: colors.scrim,
   },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: space.gutter,

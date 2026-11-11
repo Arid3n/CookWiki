@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: 12 },
   round: {
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(32,18,10,0.28)',
+    backgroundColor: colors.scrim,
   },
   heroText: { paddingHorizontal: space.gutter, paddingTop: 10 },
   kind: { color: colors.text, fontFamily: fonts.name, fontSize: 11 },
