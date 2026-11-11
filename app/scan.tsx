@@ -19,7 +19,7 @@ type Result =
 
 const GENERIC = 'Something went wrong. Nothing was saved. Please try again.';
 
-function errorResult(e: unknown): Result {
+function errorResult(e: unknown): Extract<Result, { type: 'error' }> {
   if (e instanceof MissingKeyError) {
     return { type: 'error', text: 'No Gemini API key is set. Add your key in Settings to scan labels.', settings: true };
   }
@@ -39,6 +39,7 @@ export default function Scan() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [moved, setMoved] = useState<FoodKind | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
   const mounted = useRef(true);
   const busyRef = useRef(false);
 
@@ -67,6 +68,7 @@ export default function Scan() {
     if (r) {
       setResult(r);
       setMoved(null);
+      setMoveError(null);
     }
   }, []);
 
@@ -108,20 +110,38 @@ export default function Scan() {
         const foods = await listFoods();
         const a = asNew ? args : { ...args, variantLabel: args.variantLabel ?? 'Variation' };
         const outcome = await saveFromChat(a, foods, asNew ? { forceNew: true } : { focusFoodId: existing.id });
-        if (outcome.type === 'duplicate') return null;
+        if (outcome.type === 'duplicate') {
+          return { type: 'error', text: 'This food is still flagged as a duplicate, so nothing was saved. Try again or open the existing food.' };
+        }
         return { type: 'saved', food: outcome.food, variant: outcome.type === 'variant-added' };
       }),
     [run],
   );
 
   const move = useCallback(
-    (food: Food, kind: FoodKind) =>
-      run(async () => {
+    async (food: Food, kind: FoodKind) => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      setBusy(true);
+      try {
         await updateFood(food.id, { kind });
-        if (mounted.current) setMoved(kind);
-        return null;
-      }).then(() => undefined),
-    [run],
+        if (mounted.current) {
+          setMoved(kind);
+          setMoveError(null);
+        }
+      } catch (e) {
+        // The food is already saved: keep its card and show the failure beside it.
+        const text =
+          e instanceof OfflineError
+            ? 'You need internet to move it. The food is saved, but it was not moved.'
+            : errorResult(e).text.replace('Nothing was saved.', 'The food is saved, but it was not moved.');
+        if (mounted.current) setMoveError(text);
+      } finally {
+        busyRef.current = false;
+        if (mounted.current) setBusy(false);
+      }
+    },
+    [],
   );
 
   const kindOf = (f: Food): FoodKind => moved ?? f.kind;
@@ -169,6 +189,7 @@ export default function Scan() {
                 />
               )}
             </View>
+            {moveError && <Text style={styles.text}>{moveError}</Text>}
           </View>
         )}
 

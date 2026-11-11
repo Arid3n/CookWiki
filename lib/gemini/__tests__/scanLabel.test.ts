@@ -46,4 +46,34 @@ describe('scanLabel', () => {
     expect(req.responseSchema.properties.macros).toBeDefined();
     expect(req.tools).toBeUndefined();
   });
+
+  describe('per-100 g plausibility', () => {
+    const say = (macros: Record<string, number>) =>
+      mockCall.mockResolvedValue({ text: JSON.stringify({ ...good, macros }) });
+    const PER = /per-serving values/;
+    it.each([
+      ['unconverted label', { kcal: 1000, protein: 10, carbs: 250, fat: 0 }],
+      ['macro sum over 105', { kcal: 800, protein: 40, carbs: 40, fat: 40 }],
+      ['kcal over 900', { kcal: 950, protein: 0, carbs: 0, fat: 100 }],
+      ['satFat over 100', { kcal: 400, protein: 0, carbs: 0, fat: 44, satFat: 101 }],
+      ['sugar over 100', { kcal: 200, protein: 0, carbs: 50, fat: 0, sugar: 101 }],
+      ['fiber over 100', { kcal: 200, protein: 0, carbs: 50, fat: 0, fiber: 101 }],
+    ])('rejects %s', async (_n, macros) => {
+      say(macros);
+      await expect(scanLabel('AAAA', 'image/jpeg')).rejects.toThrow(PER);
+    });
+    it('accepts tzatziki-like and butter-like foods', async () => {
+      say({ kcal: 96, protein: 4, carbs: 4, fat: 7 });
+      await expect(scanLabel('AAAA', 'image/jpeg')).resolves.toBeDefined();
+      say({ kcal: 717, protein: 0.9, carbs: 0.1, fat: 81, satFat: 51 });
+      await expect(scanLabel('AAAA', 'image/jpeg')).resolves.toBeDefined();
+    });
+    it('uses scan wording for the Atwater mismatch', async () => {
+      say({ kcal: 900, protein: 1, carbs: 1, fat: 1 });
+      const e = await scanLabel('AAAA', 'image/jpeg').catch((x) => x);
+      expect(e).toBeInstanceOf(InvalidSaveError);
+      expect(e.message).toMatch(/Retake the photo/);
+      expect(e.message).not.toMatch(/Ask again/);
+    });
+  });
 });

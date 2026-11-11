@@ -37,5 +37,33 @@ export async function scanLabel(base64: string, mimeType: string): Promise<SaveF
   } catch {
     throw new InvalidSaveError('The label could not be read, so nothing was saved. Try a clearer photo.');
   }
-  return parseSaveFoodArgs(parsed);
+  let args: SaveFoodArgs;
+  try {
+    args = parseSaveFoodArgs(parsed);
+  } catch (e) {
+    // Chat tells the user to "ask again"; on the scan screen the fix is a new photo.
+    if (e instanceof InvalidSaveError) {
+      throw new InvalidSaveError(
+        e.message.replace('Ask again for corrected numbers.', 'Retake the photo so the label is clear.'),
+      );
+    }
+    throw e;
+  }
+  assertPer100g(args);
+  return args;
+}
+
+const PER_SERVING_MESSAGE =
+  'These look like per-serving values, not per 100 g, so nothing was saved. Retake the photo so the per-100 g column is visible.';
+
+/** Per 100 g of any food cannot exceed these; a breach means the label was never converted. */
+function assertPer100g({ macros: m }: SaveFoodArgs): void {
+  const grams = [m.protein, m.carbs, m.fat, m.satFat, m.sugar, m.fiber];
+  if (
+    m.protein + m.carbs + m.fat > 105 ||
+    grams.some((g) => g !== undefined && g > 100) ||
+    m.kcal > 900
+  ) {
+    throw new InvalidSaveError(PER_SERVING_MESSAGE);
+  }
 }
