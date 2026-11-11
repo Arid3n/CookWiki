@@ -11,6 +11,8 @@ import { listFoods, syncFromSupabase } from '@/lib/library/repository';
 import { normalizeName } from '@/lib/library/duplicates';
 import { applyFilters, distinctTags } from '@/lib/library/search';
 import { sortFoods } from '@/lib/library/sort';
+import { describeFilters, mergeTags } from '@/lib/library/searchSummary';
+import { useSmartSearch } from '@/lib/library/useSmartSearch';
 import { Food } from '@/lib/library/types';
 
 /**
@@ -70,10 +72,8 @@ export default function Library() {
     if (mounted.current) setRefreshing(false);
   }, [load]);
 
-  // SEAM (Task 14): AI search interpretation hooks in here. Does nothing yet.
-  const onSubmitSearch = useCallback((_text: string) => {}, []);
-
   const allTags = useMemo(() => distinctTags(foods), [foods]);
+  const smart = useSmartSearch(query, allTags);
 
   // Drop selections whose tag no longer exists (e.g. after a refresh); otherwise
   // an invisible chip would keep filtering everything out.
@@ -91,17 +91,19 @@ export default function Library() {
   }, []);
 
   const sections = useMemo(() => {
-    const visible = applyFilters(foods, {
-      text: query.trim() || undefined,
-      tags: activeTags.length > 0 ? activeTags : undefined,
-    });
+    // Plain text is the baseline; an arrived interpretation replaces the text
+    // and adds its filters, with chip tags unioned in.
+    const tags = mergeTags(activeTags, smart.filters?.tags);
+    const visible = applyFilters(foods, smart.filters
+      ? { ...smart.filters, tags: tags.length > 0 ? tags : undefined }
+      : { text: query.trim() || undefined, tags: tags.length > 0 ? tags : undefined });
     const dishes = sortFoods(visible.filter((f) => f.kind === 'dish'));
     const singles = sortFoods(visible.filter((f) => f.kind === 'single'));
     return [
       { title: 'Dishes', data: dishes },
       { title: 'Single foods', data: singles },
     ].filter((s) => s.data.length > 0);
-  }, [foods, query, activeTags]);
+  }, [foods, query, activeTags, smart.filters]);
 
   const openFood = useCallback((id: string) => {
     router.push({ pathname: '/food/[id]', params: { id } });
@@ -130,7 +132,6 @@ export default function Library() {
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
-          onSubmitEditing={() => onSubmitSearch(query)}
           placeholder="Search foods or tags"
           placeholderTextColor="#94A3B8"
           returnKeyType="search"
@@ -184,6 +185,33 @@ export default function Library() {
             );
           })}
         </ScrollView>
+      )}
+
+      {smart.filters && (
+        <View style={styles.smartRow} accessibilityLiveRegion="polite">
+          <Text style={styles.smartText} numberOfLines={1}>
+            Smart search: {describeFilters({ ...smart.filters, tags: mergeTags(smart.filters.tags) })}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss smart search"
+            onPress={smart.dismiss}
+            hitSlop={8}
+            style={styles.smartDismiss}
+          >
+            <Ionicons name="close-circle" size={20} color="#94A3B8" />
+          </Pressable>
+        </View>
+      )}
+
+      {smart.keyMissing && (
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push('/settings')}
+          style={styles.banner}
+        >
+          <Text style={styles.bannerText}>Add a Gemini key in Settings for smart search</Text>
+        </Pressable>
       )}
 
       {offline && (
@@ -252,6 +280,12 @@ const styles = StyleSheet.create({
   clearChipText: { color: '#10B981', fontSize: 14, fontWeight: '600' },
   banner: { marginHorizontal: 16, marginBottom: 4, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#1E293B' },
   bannerText: { color: '#94A3B8', fontSize: 13 },
+  smartRow: {
+    flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 4,
+    paddingLeft: 12, borderRadius: 8, backgroundColor: '#1E293B',
+  },
+  smartText: { flex: 1, color: '#10B981', fontSize: 13 },
+  smartDismiss: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { flex: 1 },
   listContent: { paddingHorizontal: 16, paddingBottom: LIST_BOTTOM_PADDING },
