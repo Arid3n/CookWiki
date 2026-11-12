@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '@/lib/ui/theme';
@@ -13,10 +13,11 @@ interface Props {
   height: number;
 }
 
-/** Faint peach contour lines, absolutely filling the parent. */
-export default function TopoPattern({ seed, width, height }: Props) {
+/** Faint dark contour lines, absolutely filling the parent. */
+function TopoPattern({ seed, width, height }: Props) {
   const vbH = width > 0 ? (VB_W * height) / width : 0;
-  const paths = useMemo(() => topoPaths(seed, VB_W, vbH), [seed, vbH]);
+  // One <Path> for all rings: a single native view instead of ~33 keeps screen mount and transitions cheap.
+  const d = useMemo(() => topoPaths(seed, VB_W, vbH).join(' '), [seed, vbH]);
   if (width <= 0 || height <= 0) return null;
   return (
     <Svg
@@ -27,9 +28,9 @@ export default function TopoPattern({ seed, width, height }: Props) {
       preserveAspectRatio="xMidYMid slice"
       pointerEvents="none"
     >
-      {paths.map((d, i) => (
-        <Path key={i} d={d} fill="none" stroke={colors.peach} strokeOpacity={0.22} strokeWidth={0.8} />
-      ))}
+      <Path d={d} fill="none" stroke={colors.onHero} strokeOpacity={0.16} strokeWidth={0.8} />
     </Svg>
   );
 }
+
+export default memo(TopoPattern);

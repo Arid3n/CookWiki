@@ -1,18 +1,18 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Macros } from '@/lib/library/types';
-import { colors, fonts } from '@/lib/ui/theme';
+import { colors, fonts, shape } from '@/lib/ui/theme';
 
 const fmt = (n: number) => String(Math.round(n * 10) / 10);
 
 /**
- * Protein / carbs / fat as three tiles (gold, sage, peach), then optional nutrients as small
+ * Protein / carbs / fat as three tiles (gold, sage, accent), then optional nutrients as small
  * lines when present. Calories are not shown here: screens show kcal on their own.
  */
 export default function MacroLines({ m }: { m: Macros }) {
   const tiles: [string, number, string][] = [
     ['Protein', m.protein, colors.gold],
     ['Carbs', m.carbs, colors.sage],
-    ['Fat', m.fat, colors.peach],
+    ['Fat', m.fat, colors.accent],
   ];
   const extra: [string, string][] = [];
   if (m.satFat !== undefined) extra.push(['Saturated fat', `${fmt(m.satFat)} g`]);
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   tile: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: 18,
+    borderRadius: shape.lg,
     paddingVertical: 11,
     paddingHorizontal: 12,
     borderBottomWidth: 3,

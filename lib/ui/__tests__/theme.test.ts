@@ -2,8 +2,8 @@ import { colors, fonts, space, sizes } from '../theme';
 
 describe('theme tokens', () => {
   it('has the approved palette', () => {
-    expect(colors.hero).toBe('#c16b27');
-    expect(colors.peach).toBe('#fcc79b');
+    expect(colors.hero).toBe('#cab356');
+    expect(colors.accent).toBe('#ddd09a');
     expect(colors.gold).toBe('#cab356');
     expect(colors.sage).toBe('#b7c2a9');
     expect(colors.bg).toBe('#1A110B');
@@ -13,10 +13,9 @@ describe('theme tokens', () => {
     expect(colors.sub).toBe('#B39A86');
     expect(colors.ink).toBe('#20120A');
     expect(colors.ringFill).toBe('#120B07');
-    expect(colors.rust).toBe('#c16b27');
+    expect(colors.accentLine).toBe('#c4b878');
     expect(colors.danger).toBe('#B5524A');
     expect(colors.dangerText).toBe('#E8837A');
-    expect(colors.scrim).toBe('rgba(32,18,10,0.28)');
   });
 
   it('has fonts, spacing and sizes', () => {

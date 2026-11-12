@@ -3,8 +3,10 @@ import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } fr
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Hero from '@/components/ui/Hero';
-import Icon from '@/components/ui/Icon';
-import { colors, fonts, space } from '@/lib/ui/theme';
+import HeroTitle from '@/components/ui/HeroTitle';
+import HeroButton, { heroRowStyle } from '@/components/ui/HeroButton';
+import { colors, fonts, space, shape } from '@/lib/ui/theme';
+import { keyboardClearance, useKeyboardHeight } from '@/lib/ui/useKeyboardHeight';
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_GEMINI_MODEL, getGeminiConfig, setGeminiKey, setGeminiModel } from '@/lib/gemini/config';
 
@@ -12,6 +14,8 @@ const isErrorStatus = (s: string) => s.startsWith('Could not');
 
 export default function Settings() {
   const insets = useSafeAreaInsets();
+  // Shrink the screen above the keyboard so the focused field is never covered.
+  const keyboardPad = keyboardClearance(useKeyboardHeight(), insets.bottom);
   const [key, setKey] = useState('');
   const [model, setModel] = useState(DEFAULT_GEMINI_MODEL);
   const [show, setShow] = useState(false);
@@ -60,17 +64,13 @@ export default function Settings() {
   };
 
   return (
-    <View style={styles.container}>
-      <Hero height={132} seed={5}>
+    <View style={[styles.container, { paddingBottom: keyboardPad }]}>
+      <Hero height={210}>
         <View style={styles.heroRow}>
-          <Pressable
-            accessibilityRole="button" accessibilityLabel="Back" hitSlop={6} style={styles.round}
-            onPress={() => { Keyboard.dismiss(); router.back(); }}
-          >
-            <Icon name="back" size={18} color={colors.text} />
-          </Pressable>
-          <Text style={styles.title} accessibilityRole="header">settings</Text>
-          <View style={styles.spacer} />
+          <HeroButton icon="back" accessibilityLabel="Back" onPress={() => { Keyboard.dismiss(); router.back(); }} />
+        </View>
+        <View style={styles.heroText}>
+          <HeroTitle style={styles.title} accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.4} maxFontSizeMultiplier={1.2}>settings</HeroTitle>
         </View>
       </Hero>
       <ScrollView
@@ -133,35 +133,31 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: 12 },
-  round: {
-    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.scrim,
-  },
-  spacer: { width: 36, height: 36 },
-  title: { color: colors.text, fontFamily: fonts.display, fontSize: 44, lineHeight: 48, textTransform: 'uppercase' },
-  card: { backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 12 },
-  link: { color: colors.peach, fontFamily: fonts.bodyBold, fontSize: 15 },
+  container: { flex: 1 },
+  heroRow: heroRowStyle,
+  heroText: { position: 'absolute', left: space.gutter, right: space.gutter, bottom: 30 },
+  title: { color: colors.onHero, fontFamily: fonts.display, fontSize: 100, lineHeight: 94, textAlign: 'center', textTransform: 'uppercase' },
+  card: { backgroundColor: colors.surface, borderRadius: shape.card, padding: 16, marginBottom: 12 },
+  link: { color: colors.accent, fontFamily: fonts.bodyBold, fontSize: 15 },
   section: { color: colors.text, fontFamily: fonts.heading, fontSize: 18, marginBottom: 6 },
   hint: { color: colors.sub, fontFamily: fonts.body, fontSize: 14, marginBottom: 8 },
   label: { color: colors.sub, fontFamily: fonts.bodyBold, fontSize: 13, marginBottom: 6, marginTop: 12 },
   row: { flexDirection: 'row', alignItems: 'center' },
   input: {
     backgroundColor: colors.surface2,
-    borderRadius: 14,
+    borderRadius: shape.lg,
     color: colors.text,
     fontFamily: fonts.body,
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontSize: 16,
   },
-  toggle: { paddingHorizontal: 12, paddingVertical: 10 },
-  primary: { backgroundColor: colors.peach, borderRadius: 24, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 24 },
+  toggle: { paddingHorizontal: 12, minHeight: 48, justifyContent: 'center' },
+  primary: { backgroundColor: colors.accent, borderRadius: shape.lg, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 24 },
   primaryText: { color: colors.ink, fontFamily: fonts.bodyBold, fontSize: 16 },
   secondary: {
     backgroundColor: colors.surface2,
-    borderRadius: 24,
+    borderRadius: shape.lg,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',

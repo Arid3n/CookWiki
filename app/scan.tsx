@@ -11,8 +11,11 @@ import { listFoods, updateFood } from '@/lib/library/repository';
 import { saveFromChat } from '@/lib/library/saveFromChat';
 import type { Food, FoodKind } from '@/lib/library/types';
 import Hero from '@/components/ui/Hero';
+import HeroTitle from '@/components/ui/HeroTitle';
+import PopIn from '@/components/ui/PopIn';
+import HeroButton, { heroRowStyle } from '@/components/ui/HeroButton';
 import Icon from '@/components/ui/Icon';
-import { colors, fonts, space } from '@/lib/ui/theme';
+import { colors, fonts, space, shape } from '@/lib/ui/theme';
 
 type Result =
   | { type: 'saved'; food: Food; variant: boolean }
@@ -152,24 +155,30 @@ export default function Scan() {
 
   return (
     <View style={styles.screen}>
-      <Hero height={108} seed={6}>
+      <Hero height={270}>
         <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button" accessibilityLabel="Back" style={styles.back} hitSlop={6}
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/library'))}
-          >
-            <Icon name="back" size={18} color={colors.text} />
-          </Pressable>
-          <Text style={styles.title} accessibilityRole="header">scan</Text>
-          <View style={styles.spacer} />
+          <HeroButton icon="back" accessibilityLabel="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/library'))} />
+        </View>
+        <View style={styles.heroText}>
+          <HeroTitle style={styles.title} accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.4} maxFontSizeMultiplier={1.2}>scan</HeroTitle>
         </View>
       </Hero>
-      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: 96 + insets.bottom }]}>
-        <Text style={styles.text}>
-          Take a photo of a nutrition label. Values are saved per 100 g. The photo is not stored.
-        </Text>
-        <Btn label={busy ? 'Working...' : 'Take photo'} disabled={busy} onPress={takePhoto} />
-        {busy && <ActivityIndicator color={colors.peach} style={styles.spinner} />}
+      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: 110 + insets.bottom }]}>
+        <View style={styles.viewfinder} accessibilityLabel="Label scanner">
+          <View style={[styles.corner, styles.tl]} />
+          <View style={[styles.corner, styles.tr]} />
+          <View style={[styles.corner, styles.bl]} />
+          <View style={[styles.corner, styles.br]} />
+          {busy ? (
+            <ActivityIndicator color={colors.accent} size="large" />
+          ) : (
+            <View style={styles.camCircle}>
+              <Icon name="camera" size={30} color={colors.accent} />
+            </View>
+          )}
+          <Text style={styles.vfText}>{busy ? 'Reading the label…' : 'Frame the nutrition table'}</Text>
+        </View>
+        <Text style={styles.hint}>Values are saved per 100 g. The photo is not stored.</Text>
 
         {result?.type === 'error' && (
           <View style={styles.card} accessibilityLiveRegion="polite">
@@ -180,7 +189,7 @@ export default function Scan() {
         )}
 
         {result?.type === 'saved' && (
-          <View style={styles.card} accessibilityLiveRegion="polite">
+          <PopIn style={styles.card} accessibilityLiveRegion="polite">
             <Text style={styles.text}>
               {result.variant ? `Saved as a new variant of ${result.food.name}` : `Saved ${result.food.name}`}
             </Text>
@@ -195,7 +204,7 @@ export default function Scan() {
               )}
             </View>
             {moveError && <Text style={styles.errorText}>{moveError}</Text>}
-          </View>
+          </PopIn>
         )}
 
         {result?.type === 'duplicate' && (
@@ -209,6 +218,18 @@ export default function Scan() {
           </View>
         )}
       </ScrollView>
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + space.gutter }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Take photo"
+          disabled={busy}
+          onPress={takePhoto}
+          style={({ pressed }) => [styles.pill, (busy || pressed) && styles.disabled]}
+        >
+          <Icon name="camera" size={20} color={colors.ink} />
+          <Text style={styles.pillText}>{busy ? 'Working...' : 'Take photo'}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -225,19 +246,36 @@ function Btn({ label, onPress, disabled }: { label: string; onPress: () => void;
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: 12 },
-  spacer: { width: 36, height: 36 },
-  back: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.scrim },
-  title: { color: colors.text, fontFamily: fonts.display, fontSize: 44, lineHeight: 48, textTransform: 'uppercase' },
+  screen: { flex: 1 },
+  header: heroRowStyle,
+  heroText: { position: 'absolute', left: space.gutter, right: space.gutter, bottom: 30 },
+  title: { color: colors.onHero, fontFamily: fonts.display, fontSize: 100, lineHeight: 94, textAlign: 'center', textTransform: 'uppercase' },
   body: { padding: space.gutter, gap: 16 },
   text: { color: colors.text, fontFamily: fonts.body, fontSize: 16 },
   errorText: { color: colors.dangerText, fontFamily: fonts.body, fontSize: 16 },
-  spinner: { marginVertical: 8 },
-  card: { backgroundColor: colors.surface, borderRadius: 18, padding: 14, gap: 12 },
+  viewfinder: {
+    height: 220, borderRadius: shape.xl, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', gap: 14,
+  },
+  corner: { position: 'absolute', width: 30, height: 30, borderColor: colors.accent },
+  tl: { top: 14, left: 14, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 12 },
+  tr: { top: 14, right: 14, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 12 },
+  bl: { bottom: 14, left: 14, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 12 },
+  br: { bottom: 14, right: 14, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 12 },
+  camCircle: {
+    width: 64, height: 64, borderRadius: shape.xl, backgroundColor: colors.accentContainer, alignItems: 'center', justifyContent: 'center',
+  },
+  vfText: { color: colors.sub, fontFamily: fonts.body, fontSize: 14 },
+  hint: { color: colors.sub, fontFamily: fonts.body, fontSize: 13, textAlign: 'center' },
+  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.gutter, paddingTop: 12, backgroundColor: colors.bg },
+  pill: {
+    height: 56, borderRadius: shape.lg, backgroundColor: colors.accent, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 10,
+  },
+  pillText: { color: colors.ink, fontFamily: fonts.heading, fontSize: 17 },
+  card: { backgroundColor: colors.surface, borderRadius: shape.card, padding: 14, gap: 12 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   btn: {
-    minHeight: 44, paddingHorizontal: 18, borderRadius: 22, backgroundColor: colors.peach,
+    minHeight: 44, paddingHorizontal: 18, borderRadius: shape.lg, backgroundColor: colors.accent,
     alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start',
   },
   btnText: { color: colors.ink, fontFamily: fonts.bodyBold, fontSize: 15 },

@@ -4,10 +4,15 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import FoodRow from '@/components/FoodRow';
-import ChatBar from '@/components/ChatBar';
+import ChatBar, { CHAT_BAR_HEIGHT } from '@/components/ChatBar';
 import Hero from '@/components/ui/Hero';
+import HeroTitle from '@/components/ui/HeroTitle';
+import HeroButton, { heroRowStyle } from '@/components/ui/HeroButton';
 import Icon from '@/components/ui/Icon';
-import { colors, fonts, space } from '@/lib/ui/theme';
+import { colors, fonts, shape, space, type } from '@/lib/ui/theme';
+import { useReducedMotion } from '@/lib/ui/useReducedMotion';
+import { keyboardClearance, useKeyboardHeight } from '@/lib/ui/useKeyboardHeight';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { listFoods, syncFromSupabase } from '@/lib/library/repository';
 import { normalizeName } from '@/lib/library/duplicates';
 import { applyFilters, distinctTags } from '@/lib/library/search';
@@ -17,14 +22,11 @@ import { describeFilters, mergeTags } from '@/lib/library/searchSummary';
 import { useSmartSearch } from '@/lib/library/useSmartSearch';
 import { Food } from '@/lib/library/types';
 
-/**
- * Bottom padding so the last row clears the global calculator FAB, which sits
- * 32pt above the ChatBar and is sizes.fab (56pt) tall:
- * 32 + 56 + 8 breathing room = 96.
- */
-const LIST_BOTTOM_PADDING = 96;
-const HERO_HEIGHT = 164;
-const SEARCH_HEIGHT = 44;
+/** Bottom padding so the last row clears the ChatBar (CHAT_BAR_HEIGHT plus the safe-area inset is added at render). */
+const LIST_BOTTOM_PADDING = 24;
+/** Same header height as settings, chat and scan. */
+const HERO_HEIGHT = 150;
+const SEARCH_HEIGHT = 52;
 
 export default function Library() {
   const [foods, setFoods] = useState<Food[]>([]);
@@ -48,7 +50,10 @@ export default function Library() {
     const id = ++requestId.current;
     try {
       const result = await listFoods();
-      if (mounted.current && id === requestId.current) setFoods(result);
+      // Keep the old array when nothing changed: a focus reload then skips re-rendering the whole list mid-transition.
+      if (mounted.current && id === requestId.current) {
+        setFoods((prev) => (JSON.stringify(prev) === JSON.stringify(result) ? prev : result));
+      }
     } catch (e) {
       console.warn('Failed to read local library', e);
     } finally {
@@ -121,27 +126,37 @@ export default function Library() {
     router.push({ pathname: '/food/[id]', params: { id } });
   }, []);
 
+  // Rows that mount while the list first appears ease in, staggered and capped; later rows (scrolling, filtering) do not.
+  const reduceMotion = useReducedMotion();
+  const entering = useRef(true);
+  useEffect(() => {
+    if (loading) return;
+    const t = setTimeout(() => { entering.current = false; }, 900);
+    return () => clearTimeout(t);
+  }, [loading]);
+  const renderRow = useCallback(
+    ({ item, index }: { item: Food; index: number }) => (
+      <FoodRow food={item} onPress={openFood} enterDelay={entering.current && !reduceMotion ? Math.min(index, 7) * 35 : undefined} />
+    ),
+    [openFood, reduceMotion],
+  );
+
   const dishCount = useMemo(() => foods.filter((f) => f.kind === 'dish').length, [foods]);
 
+  // Shrink the list above the keyboard; the absolutely placed ChatBar rides on it separately.
+  const insets = useSafeAreaInsets();
+  const keyboardPad = keyboardClearance(useKeyboardHeight(), insets.bottom);
   const searching = query.trim().length > 0 || activeTags.length > 0;
 
   return (
-    <View style={styles.screen}>
-      <Hero height={HERO_HEIGHT} seed={2}>
+    <View style={[styles.screen, { paddingBottom: keyboardPad }]}>
+      <Hero height={HERO_HEIGHT}>
         <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.title} accessibilityRole="header">your library</Text>
-            {!loading && <Text style={styles.count}>{libraryCountLabel(foods.length, dishCount)}</Text>}
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
-            onPress={() => router.push('/settings')}
-            hitSlop={6}
-            style={styles.settings}
-          >
-            <Icon name="gear" size={18} color={colors.text} />
-          </Pressable>
+          <HeroButton icon="gear" accessibilityLabel="Settings" onPress={() => router.push('/settings')} />
+        </View>
+        <View style={styles.heroText}>
+          {!loading && <Text style={styles.count}>{libraryCountLabel(foods.length, dishCount)}</Text>}
+          <HeroTitle style={styles.title} accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.4} maxFontSizeMultiplier={1.2}>your library</HeroTitle>
         </View>
       </Hero>
 
@@ -198,7 +213,7 @@ export default function Library() {
                 accessibilityLabel={`Filter by tag ${tag}`}
                 accessibilityState={{ selected }}
                 onPress={() => toggleTag(tag)}
-                style={[styles.chip, selected && styles.chipSelected]}
+                style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.pressedScale]}
               >
                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{tag}</Text>
               </Pressable>
@@ -241,21 +256,21 @@ export default function Library() {
       )}
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color={colors.peach} size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={colors.accent} size="large" /></View>
       ) : (
         <SectionList
           style={styles.list}
-          contentContainerStyle={[styles.listContent, sections.length === 0 && styles.emptyContent]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: LIST_BOTTOM_PADDING + CHAT_BAR_HEIGHT + insets.bottom }, sections.length === 0 && styles.emptyContent]}
           sections={sections}
           keyExtractor={(f) => f.id}
-          renderItem={({ item }) => <FoodRow food={item} onPress={openFood} />}
+          renderItem={renderRow}
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionTitle} accessibilityRole="header">{section.title}</Text>
           )}
           stickySectionHeadersEnabled={false}
           keyboardShouldPersistTaps="handled"
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.peach} colors={[colors.peach]} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />
           }
           ListEmptyComponent={
             <Text style={styles.empty}>
@@ -273,55 +288,49 @@ export default function Library() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
-    paddingHorizontal: space.gutter, paddingTop: 14,
-  },
-  headerText: { flex: 1, paddingRight: 12 },
-  title: { color: colors.text, fontFamily: fonts.display, fontSize: 30, lineHeight: 34, textTransform: 'uppercase' },
-  count: { color: colors.peach, fontFamily: fonts.body, fontSize: 12, marginTop: 4 },
-  settings: {
-    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.scrim,
-  },
+  screen: { flex: 1 },
+  // Same arrangement as the food detail header: button on top, small label above a big title at the bottom left.
+  header: { ...heroRowStyle, justifyContent: 'flex-end' },
+  heroText: { position: 'absolute', left: space.gutter, right: space.gutter + 44, bottom: 30 },
+  title: { color: colors.onHero, fontFamily: fonts.display, fontSize: 84, lineHeight: 78, marginTop: 2, textTransform: 'uppercase' },
+  count: { color: colors.onHero, fontFamily: fonts.name, fontSize: type.label },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: space.gutter,
     marginTop: -SEARCH_HEIGHT / 2, marginBottom: 12, zIndex: 5,
-    height: SEARCH_HEIGHT, paddingHorizontal: space.gutter, borderRadius: SEARCH_HEIGHT / 2,
+    height: SEARCH_HEIGHT, paddingHorizontal: space.gutter, borderRadius: shape.bar,
     backgroundColor: colors.surface2,
     shadowColor: colors.shadow, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
-  searchInput: { flex: 1, height: SEARCH_HEIGHT, color: colors.text, fontFamily: fonts.body, fontSize: 14 },
+  searchInput: { flex: 1, height: SEARCH_HEIGHT, color: colors.text, fontFamily: fonts.body, fontSize: type.body },
   clear: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginRight: -12 },
   chipScroll: { flexGrow: 0, marginBottom: 8 },
   chipRow: { paddingHorizontal: space.gutter, gap: 6, alignItems: 'center' },
   chip: {
-    minHeight: 44, minWidth: 44, paddingHorizontal: 14, borderRadius: 22,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2,
+    minHeight: 48, minWidth: 48, paddingHorizontal: 14, borderRadius: shape.sm,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.outline, backgroundColor: colors.surface,
   },
-  chipSelected: { backgroundColor: colors.peach },
+  pressedScale: { transform: [{ scale: 0.95 }] },
+  chipSelected: { backgroundColor: colors.accentContainer, borderColor: colors.accentContainer },
   chipText: { color: colors.sub, fontFamily: fonts.body, fontSize: 13 },
-  chipTextSelected: { color: colors.ink, fontFamily: fonts.bodyBold },
-  clearChipText: { color: colors.peach, fontFamily: fonts.bodyBold, fontSize: 13 },
+  chipTextSelected: { color: colors.accent, fontFamily: fonts.bodyBold },
+  clearChipText: { color: colors.accent, fontFamily: fonts.bodyBold, fontSize: 13 },
   banner: {
     marginHorizontal: space.gutter, marginBottom: 8, paddingVertical: 10, paddingHorizontal: 12,
-    borderRadius: 14, backgroundColor: colors.surface, borderLeftWidth: 3, borderLeftColor: colors.gold,
+    borderRadius: shape.lg, backgroundColor: colors.surface2,
   },
   bannerText: { color: colors.sub, fontFamily: fonts.body, fontSize: 13 },
   smartRow: {
     flexDirection: 'row', alignItems: 'center', marginHorizontal: space.gutter, marginBottom: 8,
-    paddingLeft: 12, borderRadius: 14, backgroundColor: colors.surface,
-    borderLeftWidth: 3, borderLeftColor: colors.sage,
+    paddingLeft: 14, borderRadius: shape.lg, backgroundColor: colors.sageContainer,
   },
   smartText: { flex: 1, color: colors.text, fontFamily: fonts.body, fontSize: 13 },
   smartDismiss: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { flex: 1 },
-  listContent: { paddingHorizontal: space.gutter, paddingBottom: LIST_BOTTOM_PADDING },
+  listContent: { paddingHorizontal: space.gutter },
   emptyContent: { flexGrow: 1, justifyContent: 'center' },
   sectionTitle: {
-    color: colors.sub, fontFamily: fonts.heading, fontSize: 11, letterSpacing: 1,
+    color: colors.sub, fontFamily: fonts.heading, fontSize: type.caption, letterSpacing: 1,
     textTransform: 'uppercase', marginTop: 12, marginBottom: 8,
   },
   empty: { color: colors.sub, fontFamily: fonts.body, fontSize: 16, textAlign: 'center', paddingHorizontal: 24 },

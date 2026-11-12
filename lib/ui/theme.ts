@@ -1,6 +1,10 @@
 export const colors = {
-  hero: '#c16b27',
-  peach: '#fcc79b',
+  // Pistachio, the calculator's operator colour. Text on it is `onHero` (dark ink, ~8.9:1); cream would be ~1.8:1.
+  hero: '#cab356',
+  onHero: '#20120A',
+  onHeroScrim: 'rgba(32,18,10,0.12)',
+  // Accent: a paler, whiter take on the header pistachio.
+  accent: '#ddd09a',
   gold: '#cab356',
   sage: '#b7c2a9',
   bg: '#1A110B',
@@ -10,11 +14,14 @@ export const colors = {
   sub: '#B39A86',
   ink: '#20120A',
   ringFill: '#120B07',
-  rust: '#c16b27',
+  accentLine: '#c4b878',
   danger: '#B5524A',
   dangerText: '#E8837A',
-  scrim: 'rgba(32,18,10,0.28)',
+  accentContainer: '#3d3820',
+  sageContainer: '#2E3829',
+  outline: 'rgba(179,154,134,0.6)',
   shadow: '#000000',
+  backdrop: 'rgba(0,0,0,0.5)',
   ringEdge: 'rgba(202,179,86,0.3)',
 } as const;
 
@@ -28,11 +35,16 @@ export const fonts = {
 
 export const space = { gutter: 16 } as const;
 
+/** Text size roles (sp). Nothing below `caption`; inputs and body copy use `body`. */
+export const type = { caption: 12, label: 13, small: 14, body: 16 } as const;
+
+/** Material You style corner radii. */
+export const shape = { sm: 8, md: 12, lg: 16, card: 24, bar: 20, xl: 28 } as const;
+
 export const sizes = {
   card: 56,
-  fab: 56,
-  send: 46,
-  signRing: 64,
+  fab: 50,
+  send: 50,
   dock: 56,
   loginHero: 232,
 } as const;

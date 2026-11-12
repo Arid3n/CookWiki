@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { parseGrams, scalePortion } from '@/lib/library/portion';
 import { Macros } from '@/lib/library/types';
-import { colors, fonts, space } from '@/lib/ui/theme';
+import { colors, fonts, space, shape } from '@/lib/ui/theme';
 
 const fmt = (n: number) => String(Math.round(n * 10) / 10);
 
@@ -27,7 +27,7 @@ export default function PortionCalculator({ macros }: { macros: Macros }) {
           value={text}
           onChangeText={setText}
           keyboardType="decimal-pad"
-          placeholder="180"
+          placeholder="0"
           placeholderTextColor={colors.sub}
         />
         <Text style={styles.unit}>g</Text>
@@ -46,7 +46,7 @@ export default function PortionCalculator({ macros }: { macros: Macros }) {
             {extra.length > 0 && <Text style={styles.macros}>{extra.join(' · ')}</Text>}
           </>
         ) : (
-          <Text style={styles.macros}>Grams, e.g. 180,5</Text>
+          <Text style={styles.macros}>Enter a weight in grams</Text>
         )}
       </View>
     </View>
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: shape.card,
     paddingVertical: 12,
     paddingHorizontal: space.gutter,
     marginTop: 12,
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   inputBox: {
     width: 96,
     height: 48,
-    borderRadius: 14,
+    borderRadius: shape.lg,
     backgroundColor: colors.surface2,
     flexDirection: 'row',
     alignItems: 'center',

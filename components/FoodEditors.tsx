@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Macros } from '@/lib/library/types';
 import { normalizeTags, parseMacroValue, withRangeReset } from '@/lib/library/validate';
-import { colors, fonts, space } from '@/lib/ui/theme';
+import { colors, fonts, space, shape } from '@/lib/ui/theme';
 
 interface Common { busy: boolean; onCancel: () => void }
 
@@ -124,10 +124,10 @@ export function MacroEditor({ initial, busy, onCancel, onSave }: Common & { init
 }
 
 const s = StyleSheet.create({
-  box: { backgroundColor: colors.surface, borderRadius: 18, padding: 14, marginTop: 12, marginHorizontal: space.gutter, gap: 8 },
+  box: { backgroundColor: colors.surface, borderRadius: shape.card, padding: 14, marginTop: 12, marginHorizontal: space.gutter, gap: 8 },
   input: {
-    minHeight: 44, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.surface2,
-    borderBottomWidth: 2, borderBottomColor: colors.rust, color: colors.text, fontFamily: fonts.body, fontSize: 16,
+    minHeight: 44, paddingHorizontal: 12, borderTopLeftRadius: shape.md, borderTopRightRadius: shape.md, backgroundColor: colors.surface2,
+    borderBottomWidth: 2, borderBottomColor: colors.accentLine, color: colors.text, fontFamily: fonts.body, fontSize: 16,
   },
   num: { width: 110, textAlign: 'right' },
   field: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -135,13 +135,13 @@ const s = StyleSheet.create({
   hint: { color: colors.sub, fontFamily: fonts.body, fontSize: 13 },
   error: { color: colors.dangerText, fontFamily: fonts.body, fontSize: 14 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 22, backgroundColor: colors.surface2 },
+  tag: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: shape.sm, backgroundColor: colors.surface2 },
   tagText: { color: colors.text, fontFamily: fonts.body, fontSize: 14 },
   addRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-  btn: { minHeight: 44, minWidth: 72, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, borderRadius: 22 },
+  btn: { minHeight: 44, minWidth: 72, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, borderRadius: shape.lg },
   btnText: { color: colors.sub, fontFamily: fonts.body, fontSize: 15 },
-  primary: { backgroundColor: colors.peach },
+  primary: { backgroundColor: colors.accent },
   primaryText: { color: colors.ink, fontFamily: fonts.bodyBold, fontSize: 15 },
   disabled: { opacity: 0.5 },
 });

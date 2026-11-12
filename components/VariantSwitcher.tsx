@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Variant } from '@/lib/library/types';
-import { colors, fonts } from '@/lib/ui/theme';
+import { colors, fonts, shape } from '@/lib/ui/theme';
 
 interface Props {
   variants: Variant[];
@@ -60,19 +60,19 @@ export default function VariantSwitcher({ variants, selectedId, busy, onSelect, 
 
 const styles = StyleSheet.create({
   single: { color: colors.sub, fontFamily: fonts.body, fontSize: 14 },
-  seg: { flexGrow: 0, backgroundColor: colors.surface, borderRadius: 16 },
+  seg: { flexGrow: 0, borderWidth: 1, borderColor: colors.outline, borderRadius: shape.card },
   row: { flexGrow: 1, gap: 4, padding: 4 },
   chip: {
     flexGrow: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    minHeight: 44, paddingHorizontal: 14, borderRadius: 12,
+    minHeight: 44, paddingHorizontal: 14, borderRadius: shape.lg,
   },
-  chipOn: { backgroundColor: colors.peach },
+  chipOn: { backgroundColor: colors.accentContainer },
   chipText: { color: colors.sub, fontFamily: fonts.body, fontSize: 14 },
-  chipTextOn: { color: colors.ink, fontFamily: fonts.bodyBold },
+  chipTextOn: { color: colors.accent, fontFamily: fonts.bodyBold },
   // Default variant marker (replaces the old star icon).
   defaultDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.gold },
-  defaultDotOn: { backgroundColor: colors.ink },
+  defaultDotOn: { backgroundColor: colors.accent },
   makeDefault: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  makeDefaultText: { color: colors.peach, fontFamily: fonts.bodyBold, fontSize: 14 },
+  makeDefaultText: { color: colors.accent, fontFamily: fonts.bodyBold, fontSize: 14 },
   disabled: { opacity: 0.5 },
 });
